@@ -4,9 +4,30 @@ from typing import Any
 import fitz
 
 from backend.services.asset_registry import AssetRegistry
+from backend.services.office_converter import POWERPOINT_EXTENSIONS, WORD_EXTENSIONS, OfficeConverter
 
 
 class DocumentExporter:
+    def __init__(self, office_converter: OfficeConverter | None = None):
+        self.office_converter = office_converter or OfficeConverter()
+
+    def export(
+        self,
+        project_dir: Path,
+        file_path: Path,
+        scale: int,
+        page_start: int | None,
+        page_end: int | None,
+        subfolder_output: bool,
+    ) -> dict[str, Any]:
+        suffix = file_path.suffix.lower()
+        if suffix == ".pdf":
+            return self.export_pdf(project_dir, file_path, scale, page_start, page_end, subfolder_output)
+        if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
+            converted_pdf = self.office_converter.convert_to_pdf(file_path, project_dir / "pages" / "_office_pdf")
+            return self.export_pdf(project_dir, converted_pdf, scale, page_start, page_end, subfolder_output)
+        raise ValueError(f"不支持的文档格式：{suffix}")
+
     def export_pdf(
         self,
         project_dir: Path,

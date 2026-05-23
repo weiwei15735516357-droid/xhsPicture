@@ -45,7 +45,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/documents/export")
     def export_document(request: ExportDocumentRequest) -> dict[str, Any]:
-        result = DocumentExporter().export_pdf(
+        result = DocumentExporter().export(
             project_dir=Path(request.project_dir),
             file_path=Path(request.file_path),
             scale=request.scale,
