@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小红书图片工作台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="brand">小红书图片工作台</div>
+      <button class="nav active">工作台</button>
+      <button class="nav">素材池</button>
+      <button class="nav">文档转图</button>
+      <button class="nav">透视合成</button>
+      <button class="nav">拼图模板</button>
+      <button class="nav">导出任务</button>
+      <button class="nav">飞书上传</button>
+      <button class="nav">设置</button>
+    </aside>
+    <main class="workspace">
+      <section class="topbar">
+        <div>
+          <h1>工作台</h1>
+          <p>导入素材、生成图片、导出并上传飞书。</p>
+        </div>
+        <div id="backend-status" class="status">后端检测中</div>
+      </section>
+      <section class="actions">
+        <button>新建项目</button>
+        <button>打开项目</button>
+        <button>导入素材</button>
+      </section>
+      <section class="panel-grid">
+        <article class="panel">
+          <h2>当前项目</h2>
+          <p id="current-project">未选择项目</p>
+        </article>
+        <article class="panel">
+          <h2>最近任务</h2>
+          <p>暂无任务</p>
+        </article>
+        <article class="panel">
+          <h2>下一步</h2>
+          <p>阶段一完成后接入素材导入和文档转图。</p>
+        </article>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
