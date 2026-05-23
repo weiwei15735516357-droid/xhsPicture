@@ -1,14 +1,16 @@
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
-from backend.models.schemas import CreateLogRequest, CreateProjectRequest, ImportAssetsRequest
+from backend.models.schemas import CreateLogRequest, CreateProjectRequest, ExportDocumentRequest, ImportAssetsRequest
 from backend.services.asset_importer import AssetImporter
 from backend.services.asset_registry import AssetRegistry
+from backend.services.document_exporter import DocumentExporter
 from backend.services.log_service import LogService
 from backend.services.project_service import ProjectService
 from backend.services.settings_store import SettingsStore
+from backend.services.task_store import task_store
 from backend.storage import paths
 
 
@@ -40,6 +42,26 @@ def create_app() -> FastAPI:
         paths_to_import = [Path(item) for item in request.paths]
         assets = AssetImporter().import_paths(Path(request.project_dir), paths_to_import)
         return {"assets": assets}
+
+    @app.post("/api/documents/export")
+    def export_document(request: ExportDocumentRequest) -> dict[str, Any]:
+        result = DocumentExporter().export_pdf(
+            project_dir=Path(request.project_dir),
+            file_path=Path(request.file_path),
+            scale=request.scale,
+            page_start=request.page_start,
+            page_end=request.page_end,
+            subfolder_output=request.subfolder_output,
+        )
+        task = task_store.create_completed("document_export", result)
+        return {"task": task, "assets": result["assets"]}
+
+    @app.get("/api/tasks/{task_id}")
+    def get_task(task_id: str) -> dict[str, Any]:
+        task = task_store.get(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
 
     @app.get("/api/logs")
     def list_logs() -> list[dict[str, Any]]:

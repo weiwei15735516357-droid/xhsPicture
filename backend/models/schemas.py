@@ -33,3 +33,12 @@ class CreateLogRequest(BaseModel):
 class ImportAssetsRequest(BaseModel):
     project_dir: str
     paths: list[str]
+
+
+class ExportDocumentRequest(BaseModel):
+    project_dir: str
+    file_path: str
+    scale: int = Field(default=2, ge=1, le=4)
+    page_start: int | None = None
+    page_end: int | None = None
+    subfolder_output: bool = True
