@@ -77,7 +77,7 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 
-if (require.main === module && app) {
+if (app) {
   app.whenReady().then(() => {
     startBackend();
     createWindow();
