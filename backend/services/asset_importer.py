@@ -5,7 +5,7 @@ from typing import Any
 from backend.services.asset_registry import AssetRegistry
 
 
-SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tif", ".tiff", ".jfif"}
 
 
 class AssetImporter:

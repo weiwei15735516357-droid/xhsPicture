@@ -25,7 +25,10 @@ function getBackendArgs() {
 }
 
 function getImageImportFilters() {
-  return [{ name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }];
+  return [
+    { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'jfif'] },
+    { name: '所有文件', extensions: ['*'] }
+  ];
 }
 
 function getDocumentImportFilters() {

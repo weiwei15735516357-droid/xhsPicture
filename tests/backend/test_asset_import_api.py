@@ -45,3 +45,21 @@ def test_import_folder_imports_supported_images_only(tmp_path: Path):
     assert [asset["filename"] for asset in response.json()["assets"]] == ["a.jpg", "b.webp"]
     assert list_response.status_code == 200
     assert len(list_response.json()["assets"]) == 2
+
+
+def test_import_folder_accepts_additional_common_image_extensions(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    folder = tmp_path / "images"
+    folder.mkdir()
+    (folder / "a.jfif").write_bytes(b"a")
+    (folder / "b.tiff").write_bytes(b"b")
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/assets/import",
+        json={"project_dir": str(project_dir), "paths": [str(folder)]},
+    )
+
+    assert response.status_code == 200
+    assert [asset["filename"] for asset in response.json()["assets"]] == ["a.jfif", "b.tiff"]

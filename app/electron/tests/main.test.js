@@ -47,7 +47,8 @@ test('python executable prefers bundled runtime when environment variable is abs
 
 test('image import filters include common image formats', () => {
   assert.deepStrictEqual(getImageImportFilters(), [
-    { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }
+    { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'jfif'] },
+    { name: '所有文件', extensions: ['*'] }
   ]);
 });
 
