@@ -115,7 +115,7 @@ async function exportPdf() {
   if (!requireProject()) {
     return;
   }
-  const filePath = await window.xhsApp.selectPdfFile();
+  const filePath = await window.xhsApp.selectDocumentFile();
   if (!filePath) {
     return;
   }
@@ -134,8 +134,8 @@ async function exportPdf() {
     body: JSON.stringify(payload)
   });
   setText('task-summary', `最近任务：${data.task.status}`);
-  setText('pdf-summary', `已导出 ${data.assets.length} 张 PNG。`);
-  appendLog(`PDF 转 PNG 完成，生成 ${data.assets.length} 张。`);
+  setText('document-summary', `已导出 ${data.assets.length} 张 PNG。`);
+  appendLog(`文档转 PNG 完成，生成 ${data.assets.length} 张。`);
   await refreshAssets();
 }
 
@@ -158,7 +158,7 @@ document.getElementById('import-folder-btn').addEventListener('click', async () 
     await importPaths(folder ? [folder] : []);
   });
 });
-document.getElementById('export-pdf-btn').addEventListener('click', () => runAction(exportPdf));
+document.getElementById('export-document-btn').addEventListener('click', () => runAction(exportPdf));
 
 renderProject();
 refreshBackendStatus();

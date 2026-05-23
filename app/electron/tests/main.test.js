@@ -7,7 +7,7 @@ const {
   getBackendArgs,
   getBackendWorkingDirectory,
   getImageImportFilters,
-  getPdfImportFilters,
+  getDocumentImportFilters,
   getPythonExecutable
 } = require('../main');
 
@@ -51,8 +51,8 @@ test('image import filters include common image formats', () => {
   ]);
 });
 
-test('pdf import filters include pdf only', () => {
-  assert.deepStrictEqual(getPdfImportFilters(), [
-    { name: 'PDF 文件', extensions: ['pdf'] }
+test('document import filters include pdf word and powerpoint files', () => {
+  assert.deepStrictEqual(getDocumentImportFilters(), [
+    { name: '文档文件', extensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx'] }
   ]);
 });

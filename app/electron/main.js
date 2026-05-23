@@ -28,8 +28,8 @@ function getImageImportFilters() {
   return [{ name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }];
 }
 
-function getPdfImportFilters() {
-  return [{ name: 'PDF 文件', extensions: ['pdf'] }];
+function getDocumentImportFilters() {
+  return [{ name: '文档文件', extensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx'] }];
 }
 
 function getPythonExecutable() {
@@ -121,8 +121,8 @@ if (app) {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     return result.canceled ? null : result.filePaths[0];
   });
-  ipcMain.handle('dialog:select-pdf-file', async () => {
-    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getPdfImportFilters() });
+  ipcMain.handle('dialog:select-document-file', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getDocumentImportFilters() });
     return result.canceled ? null : result.filePaths[0];
   });
 }
@@ -130,8 +130,8 @@ if (app) {
 module.exports = {
   getBackendArgs,
   getBackendWorkingDirectory,
+  getDocumentImportFilters,
   getImageImportFilters,
-  getPdfImportFilters,
   getPythonExecutable,
   startBackend,
   stopBackend
