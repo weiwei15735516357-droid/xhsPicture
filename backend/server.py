@@ -3,7 +3,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from backend.models.schemas import CreateProjectRequest
+from backend.models.schemas import CreateLogRequest, CreateProjectRequest
+from backend.services.log_service import LogService
 from backend.services.project_service import ProjectService
 from backend.services.settings_store import SettingsStore
 from backend.storage import paths
@@ -27,6 +28,14 @@ def create_app() -> FastAPI:
     @app.post("/api/project/create")
     def create_project(request: CreateProjectRequest) -> dict[str, Any]:
         return ProjectService().create_project(Path(request.project_dir))
+
+    @app.get("/api/logs")
+    def list_logs() -> list[dict[str, Any]]:
+        return LogService(paths.LOG_DIR / "app.log").list_entries()
+
+    @app.post("/api/logs")
+    def create_log(request: CreateLogRequest) -> dict[str, Any]:
+        return LogService(paths.LOG_DIR / "app.log").append(request.level, request.message, request.context)
 
     return app
 

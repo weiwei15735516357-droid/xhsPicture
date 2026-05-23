@@ -22,3 +22,9 @@ class AppSettings(BaseModel):
 
 class CreateProjectRequest(BaseModel):
     project_dir: str
+
+
+class CreateLogRequest(BaseModel):
+    level: str
+    message: str
+    context: dict = Field(default_factory=dict)
