@@ -1,4 +1,4 @@
-# 小红书图片笔记闭环工具设计
+﻿# 小红书图片笔记闭环工具设计
 
 ## 背景
 
@@ -83,7 +83,7 @@ Electron 负责桌面壳和 GUI，Python 负责本地服务与重任务处理。
 建议代码结构：
 
 ```text
-xhsNoteCreate/
+xhsPicture/
   app/
     electron/
       main.js
@@ -285,4 +285,5 @@ data/config.json
 7. 能按指定格式导出 PNG/JPG 到指定目录。
 8. 在飞书配置完整时，能测试连接并上传随机图片到指定附件字段。
 9. 所有失败任务都有可读错误信息和日志记录。
+
 
