@@ -7,16 +7,15 @@ from backend.server import create_app
 from backend.services.project_service import ProjectService
 
 
-def test_create_project_builds_required_directory_tree(tmp_path: Path):
+def test_create_project_initializes_lightweight_project_metadata(tmp_path: Path):
     service = ProjectService()
     project_dir = tmp_path / "MayCampaign"
 
     result = service.create_project(project_dir)
 
     assert result["project_dir"] == str(project_dir)
-    for name in ["source", "pages", "compositions", "collages", "exports", "logs", "templates"]:
-        assert (project_dir / name).is_dir()
     assert (project_dir / "project.json").is_file()
+    assert [child.name for child in project_dir.iterdir()] == ["project.json"]
 
 
 def test_create_project_initializes_project_json(tmp_path: Path):

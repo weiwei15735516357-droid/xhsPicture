@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
             page_end=request.page_end,
             subfolder_output=request.subfolder_output,
             summary_group_size=request.summary_group_size,
+            background_path=Path(request.background_path) if request.background_path else None,
         )
         task = task_store.create_completed("document_export", result)
         return {"task": task, "assets": result["assets"]}

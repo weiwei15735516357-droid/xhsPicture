@@ -130,6 +130,10 @@ if (app) {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     return result.canceled ? null : result.filePaths[0];
   });
+  ipcMain.handle('dialog:select-background-image', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getImageImportFilters() });
+    return result.canceled ? null : result.filePaths[0];
+  });
   ipcMain.handle('dialog:select-document-file', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getDocumentImportFilters() });
     return result.canceled ? null : result.filePaths[0];

@@ -1,6 +1,7 @@
 const state = {
   baseUrl: null,
-  projectDir: localStorage.getItem('xhs.currentProjectDir') || null
+  projectDir: localStorage.getItem('xhs.currentProjectDir') || null,
+  backgroundPath: localStorage.getItem('xhs.backgroundPath') || null
 };
 
 function setText(id, text) {
@@ -50,6 +51,7 @@ async function refreshBackendStatus() {
 
 function renderProject() {
   setText('current-project', state.projectDir || '未选择项目');
+  setText('background-summary', state.backgroundPath ? `底图：${state.backgroundPath}` : '未选择底图时使用浅灰背景。');
 }
 
 function renderAssets(assets) {
@@ -129,7 +131,8 @@ async function exportPdf() {
     page_start: pageStart ? Number(pageStart) : null,
     page_end: pageEnd ? Number(pageEnd) : null,
     subfolder_output: document.getElementById('subfolder-output').checked,
-    summary_group_size: summaryGroupSize ? Number(summaryGroupSize) : null
+    summary_group_size: summaryGroupSize ? Number(summaryGroupSize) : null,
+    background_path: state.backgroundPath || null
   };
   const data = await api('/api/documents/export', {
     method: 'POST',
@@ -159,6 +162,18 @@ document.getElementById('import-folder-btn').addEventListener('click', async () 
   await runAction(async () => {
     const folder = await window.xhsApp.selectImportFolder();
     await importPaths(folder ? [folder] : []);
+  });
+});
+document.getElementById('background-image-btn').addEventListener('click', async () => {
+  await runAction(async () => {
+    const selected = await window.xhsApp.selectBackgroundImage();
+    if (!selected) {
+      return;
+    }
+    state.backgroundPath = selected;
+    localStorage.setItem('xhs.backgroundPath', selected);
+    renderProject();
+    appendLog(`已选择底图：${selected}`);
   });
 });
 document.getElementById('export-document-btn').addEventListener('click', () => runAction(exportPdf));

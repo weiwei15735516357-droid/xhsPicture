@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import fitz
+from PIL import Image
 from fastapi.testclient import TestClient
 
 from backend.server import create_app
@@ -96,3 +97,51 @@ def test_pdf_export_groups_pages_into_summary_images(tmp_path: Path):
         "deck_汇总_003_011-012.png",
     ]
     assert all(asset["source_type"] == "汇总图" for asset in assets)
+
+
+def test_summary_uses_uploaded_background_image(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    pdf_path = tmp_path / "deck.pdf"
+    background_path = tmp_path / "background.png"
+    _create_pdf(pdf_path, pages=5)
+    Image.new("RGB", (80, 80), (20, 80, 160)).save(background_path)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/documents/export",
+        json={
+            "project_dir": str(project_dir),
+            "file_path": str(pdf_path),
+            "scale": 1,
+            "summary_group_size": 5,
+            "background_path": str(background_path),
+        },
+    )
+
+    output = Path(response.json()["assets"][0]["path"])
+    image = Image.open(output).convert("RGB")
+    assert image.getpixel((8, 8)) == (20, 80, 160)
+
+
+def test_later_summary_groups_use_hero_layout_and_fill_canvas(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    pdf_path = tmp_path / "deck.pdf"
+    _create_pdf(pdf_path, pages=8)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/documents/export",
+        json={
+            "project_dir": str(project_dir),
+            "file_path": str(pdf_path),
+            "scale": 1,
+            "summary_group_size": 5,
+        },
+    )
+
+    second_output = Path(response.json()["assets"][1]["path"])
+    image = Image.open(second_output).convert("RGB")
+    assert image.size == (1080, 1440)
+    assert image.getpixel((540, 80)) != (248, 250, 252)

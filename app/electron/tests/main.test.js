@@ -52,6 +52,10 @@ test('image import filters include common image formats', () => {
   ]);
 });
 
+test('background image filters reuse image formats', () => {
+  assert.deepStrictEqual(getImageImportFilters()[0].extensions, ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'jfif']);
+});
+
 test('document import filters include pdf word and powerpoint files', () => {
   assert.deepStrictEqual(getDocumentImportFilters(), [
     { name: 'PPT 演示文稿', extensions: ['ppt', 'pptx'] },

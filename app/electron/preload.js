@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('xhsApp', {
   selectProjectDirectory: () => ipcRenderer.invoke('dialog:select-project-directory'),
   selectImportFiles: () => ipcRenderer.invoke('dialog:select-import-files'),
   selectImportFolder: () => ipcRenderer.invoke('dialog:select-import-folder'),
+  selectBackgroundImage: () => ipcRenderer.invoke('dialog:select-background-image'),
   selectDocumentFile: () => ipcRenderer.invoke('dialog:select-document-file')
 });

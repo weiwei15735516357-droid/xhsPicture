@@ -4,14 +4,9 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_SUBDIRS = ["source", "pages", "compositions", "collages", "exports", "logs", "templates"]
-
-
 class ProjectService:
     def create_project(self, project_dir: Path) -> dict[str, Any]:
         project_dir.mkdir(parents=True, exist_ok=True)
-        for name in PROJECT_SUBDIRS:
-            (project_dir / name).mkdir(exist_ok=True)
 
         project_data = {
             "name": project_dir.name,

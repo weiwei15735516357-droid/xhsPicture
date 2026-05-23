@@ -28,6 +28,7 @@ class DocumentExporter:
         page_end: int | None,
         subfolder_output: bool,
         summary_group_size: int | None = 5,
+        background_path: Path | None = None,
     ) -> dict[str, Any]:
         suffix = file_path.suffix.lower()
         if suffix == ".pdf":
@@ -39,6 +40,7 @@ class DocumentExporter:
                 page_end,
                 subfolder_output,
                 summary_group_size=summary_group_size,
+                background_path=background_path,
             )
         if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
             converted_pdf = self.office_converter.convert_to_pdf(file_path, project_dir / "pages" / "_office_pdf")
@@ -52,6 +54,7 @@ class DocumentExporter:
                 output_name=file_path.stem,
                 origin_path=file_path,
                 summary_group_size=summary_group_size,
+                background_path=background_path,
             )
         raise ValueError(f"不支持的文档格式：{suffix}")
 
@@ -66,6 +69,7 @@ class DocumentExporter:
         output_name: str | None = None,
         origin_path: Path | None = None,
         summary_group_size: int | None = None,
+        background_path: Path | None = None,
     ) -> dict[str, Any]:
         document_name = output_name or file_path.stem
         output_dir = project_dir / document_name if subfolder_output else project_dir
@@ -89,7 +93,17 @@ class DocumentExporter:
 
         origin = str(origin_path or file_path)
         if summary_group_size:
-            assets.extend(self._save_summary_groups(registry, output_dir, document_name, rendered_pages, summary_group_size, origin))
+            assets.extend(
+                self._save_summary_groups(
+                    registry,
+                    output_dir,
+                    document_name,
+                    rendered_pages,
+                    summary_group_size,
+                    origin,
+                    background_path,
+                )
+            )
         else:
             for page_number, page_image in rendered_pages:
                 output_path = output_dir / f"{document_name}_p{page_number:03d}.png"
@@ -106,6 +120,7 @@ class DocumentExporter:
         rendered_pages: list[tuple[int, Image.Image]],
         group_size: int,
         origin: str,
+        background_path: Path | None,
     ) -> list[dict[str, Any]]:
         assets = []
         for group_index, start_index in enumerate(range(0, len(rendered_pages), group_size), start=1):
@@ -114,7 +129,7 @@ class DocumentExporter:
                 continue
             first_page = group[0][0]
             last_page = group[-1][0]
-            canvas = self._compose_summary(group, is_first_group=group_index == 1)
+            canvas = self._compose_summary(group, background_path=background_path)
             output_path = output_dir / f"{document_name}_汇总_{group_index:03d}_{first_page:03d}-{last_page:03d}.png"
             canvas.save(output_path)
             assets.append(registry.add_asset(output_path, "汇总图", origin))
@@ -125,25 +140,55 @@ class DocumentExporter:
         self._paste_contained(canvas, image, (54, 120, XHS_WIDTH - 54, XHS_HEIGHT - 120))
         return canvas
 
-    def _compose_summary(self, group: list[tuple[int, Image.Image]], is_first_group: bool) -> Image.Image:
-        canvas = Image.new("RGB", (XHS_WIDTH, XHS_HEIGHT), PAGE_BACKGROUND)
+    def _compose_summary(self, group: list[tuple[int, Image.Image]], background_path: Path | None = None) -> Image.Image:
+        canvas = self._create_background(background_path)
         draw = ImageDraw.Draw(canvas)
-        if is_first_group:
-            hero = (48, 48, XHS_WIDTH - 48, 560)
-            self._draw_card(draw, hero)
-            self._paste_contained(canvas, group[0][1], self._inset(hero, 12))
-            remaining = group[1:]
-            slots = self._grid_slots(remaining_count=len(remaining), top=600, bottom=XHS_HEIGHT - 70, columns=2)
-            for (_, image), slot in zip(remaining, slots):
-                self._draw_card(draw, slot)
-                self._paste_contained(canvas, image, self._inset(slot, 10))
-        else:
-            columns = 2 if len(group) <= 6 else 3
-            slots = self._grid_slots(remaining_count=len(group), top=54, bottom=XHS_HEIGHT - 54, columns=columns)
-            for (_, image), slot in zip(group, slots):
-                self._draw_card(draw, slot)
-                self._paste_contained(canvas, image, self._inset(slot, 10))
+        hero = (48, 48, XHS_WIDTH - 48, 560)
+        self._draw_card(draw, hero)
+        self._paste_contained(canvas, group[0][1], self._inset(hero, 12))
+        remaining = group[1:]
+        slots = self._dynamic_slots(count=len(remaining), top=600, bottom=XHS_HEIGHT - 54)
+        for (_, image), slot in zip(remaining, slots):
+            self._draw_card(draw, slot)
+            self._paste_contained(canvas, image, self._inset(slot, 10))
         return canvas
+
+    def _create_background(self, background_path: Path | None) -> Image.Image:
+        if background_path and background_path.exists():
+            image = Image.open(background_path).convert("RGB")
+            return self._cover_to_canvas(image)
+        return Image.new("RGB", (XHS_WIDTH, XHS_HEIGHT), PAGE_BACKGROUND)
+
+    def _cover_to_canvas(self, image: Image.Image) -> Image.Image:
+        canvas_ratio = XHS_WIDTH / XHS_HEIGHT
+        image_ratio = image.width / image.height
+        if image_ratio > canvas_ratio:
+            new_height = XHS_HEIGHT
+            new_width = int(new_height * image_ratio)
+        else:
+            new_width = XHS_WIDTH
+            new_height = int(new_width / image_ratio)
+        resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        left = (new_width - XHS_WIDTH) // 2
+        top = (new_height - XHS_HEIGHT) // 2
+        return resized.crop((left, top, left + XHS_WIDTH, top + XHS_HEIGHT))
+
+    def _dynamic_slots(self, count: int, top: int, bottom: int) -> list[tuple[int, int, int, int]]:
+        if count <= 0:
+            return []
+        if count == 1:
+            return [(70, top, XHS_WIDTH - 70, bottom)]
+        if count == 2:
+            mid = (top + bottom - 18) // 2
+            return [(70, top, XHS_WIDTH - 70, mid), (70, mid + 18, XHS_WIDTH - 70, bottom)]
+        if count == 3:
+            mid_y = top + int((bottom - top - 18) * 0.52)
+            return [
+                (54, top, XHS_WIDTH - 54, mid_y),
+                (54, mid_y + 18, XHS_WIDTH // 2 - 9, bottom),
+                (XHS_WIDTH // 2 + 9, mid_y + 18, XHS_WIDTH - 54, bottom),
+            ]
+        return self._grid_slots(remaining_count=count, top=top, bottom=bottom, columns=2 if count <= 6 else 3)
 
     def _grid_slots(self, remaining_count: int, top: int, bottom: int, columns: int) -> list[tuple[int, int, int, int]]:
         if remaining_count <= 0:
