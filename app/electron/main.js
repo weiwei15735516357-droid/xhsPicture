@@ -6,6 +6,7 @@ try {
 }
 
 const { spawn } = require('node:child_process');
+const fs = require('node:fs');
 const path = require('node:path');
 
 const app = electron.app;
@@ -23,7 +24,22 @@ function getBackendArgs() {
 }
 
 function getPythonExecutable() {
-  return process.env.XHS_PYTHON || 'python';
+  if (process.env.XHS_PYTHON) {
+    return process.env.XHS_PYTHON;
+  }
+  const bundledPython = path.join(
+    process.env.USERPROFILE || '',
+    '.cache',
+    'codex-runtimes',
+    'codex-primary-runtime',
+    'dependencies',
+    'python',
+    'python.exe'
+  );
+  if (fs.existsSync(bundledPython)) {
+    return bundledPython;
+  }
+  return 'python';
 }
 
 function startBackend() {
