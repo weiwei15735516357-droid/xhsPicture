@@ -18,3 +18,7 @@ class AppSettings(BaseModel):
     default_canvas_ratio: str = "3:4"
     default_export_format: str = "png"
     feishu: FeishuSettings = Field(default_factory=FeishuSettings)
+
+
+class CreateProjectRequest(BaseModel):
+    project_dir: str

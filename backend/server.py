@@ -1,7 +1,10 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
 
+from backend.models.schemas import CreateProjectRequest
+from backend.services.project_service import ProjectService
 from backend.services.settings_store import SettingsStore
 from backend.storage import paths
 
@@ -20,6 +23,10 @@ def create_app() -> FastAPI:
     @app.post("/api/settings")
     def save_settings(updates: dict[str, Any]) -> dict[str, Any]:
         return SettingsStore(paths.CONFIG_PATH).save(updates)
+
+    @app.post("/api/project/create")
+    def create_project(request: CreateProjectRequest) -> dict[str, Any]:
+        return ProjectService().create_project(Path(request.project_dir))
 
     return app
 
