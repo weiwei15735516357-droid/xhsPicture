@@ -121,21 +121,24 @@ async function exportPdf() {
   }
   const pageStart = document.getElementById('page-start').value;
   const pageEnd = document.getElementById('page-end').value;
+  const summaryGroupSize = document.getElementById('summary-group-size').value;
   const payload = {
     project_dir: state.projectDir,
     file_path: filePath,
     scale: Number(document.getElementById('pdf-scale').value),
     page_start: pageStart ? Number(pageStart) : null,
     page_end: pageEnd ? Number(pageEnd) : null,
-    subfolder_output: document.getElementById('subfolder-output').checked
+    subfolder_output: document.getElementById('subfolder-output').checked,
+    summary_group_size: summaryGroupSize ? Number(summaryGroupSize) : null
   };
   const data = await api('/api/documents/export', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
   setText('task-summary', `最近任务：${data.task.status}`);
-  setText('document-summary', `已导出 ${data.assets.length} 张 PNG。`);
-  appendLog(`文档转 PNG 完成，生成 ${data.assets.length} 张。`);
+  const mode = summaryGroupSize ? `${summaryGroupSize} 张合并` : '逐页导出';
+  setText('document-summary', `已导出 ${data.assets.length} 张 PNG（${mode}）。`);
+  appendLog(`文档转 PNG 完成，生成 ${data.assets.length} 张（${mode}）。`);
   await refreshAssets();
 }
 

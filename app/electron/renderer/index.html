@@ -61,6 +61,15 @@
             </select>
           </div>
           <div class="field-row">
+            <label for="summary-group-size">合并</label>
+            <select id="summary-group-size">
+              <option value="5" selected>5 张合并</option>
+              <option value="7">7 张合并</option>
+              <option value="9">9 张合并</option>
+              <option value="">不合并，逐页导出</option>
+            </select>
+          </div>
+          <div class="field-row">
             <label for="page-start">起始页</label>
             <input id="page-start" type="number" min="1" placeholder="1" />
           </div>
@@ -73,7 +82,7 @@
             按文档文件名创建子文件夹
           </label>
           <button id="export-document-btn">选择 PPT/Word/PDF 并转换</button>
-          <p id="document-summary" class="muted">优先支持 PPT/PPTX，输出到项目 pages 目录。</p>
+          <p id="document-summary" class="muted">默认 5 张合并，输出到“文档同名文件夹”。</p>
         </article>
 
         <article class="panel">

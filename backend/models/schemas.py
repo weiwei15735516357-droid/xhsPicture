@@ -42,3 +42,4 @@ class ExportDocumentRequest(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     subfolder_output: bool = True
+    summary_group_size: int | None = Field(default=5, ge=5, le=9)
