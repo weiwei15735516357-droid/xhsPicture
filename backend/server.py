@@ -1,4 +1,9 @@
+from typing import Any
+
 from fastapi import FastAPI
+
+from backend.services.settings_store import SettingsStore
+from backend.storage import paths
 
 
 def create_app() -> FastAPI:
@@ -7,6 +12,14 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     def health() -> dict[str, object]:
         return {"ok": True, "service": "xhs-picture-backend"}
+
+    @app.get("/api/settings")
+    def get_settings() -> dict[str, Any]:
+        return SettingsStore(paths.CONFIG_PATH).load()
+
+    @app.post("/api/settings")
+    def save_settings(updates: dict[str, Any]) -> dict[str, Any]:
+        return SettingsStore(paths.CONFIG_PATH).save(updates)
 
     return app
 
