@@ -54,6 +54,10 @@ test('image import filters include common image formats', () => {
 
 test('document import filters include pdf word and powerpoint files', () => {
   assert.deepStrictEqual(getDocumentImportFilters(), [
-    { name: '文档文件', extensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx'] }
+    { name: 'PPT 演示文稿', extensions: ['ppt', 'pptx'] },
+    { name: 'Word 文档', extensions: ['doc', 'docx'] },
+    { name: 'PDF 文件', extensions: ['pdf'] },
+    { name: '所有支持文档', extensions: ['ppt', 'pptx', 'doc', 'docx', 'pdf'] },
+    { name: '所有文件', extensions: ['*'] }
   ]);
 });
