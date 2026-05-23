@@ -1,5 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('xhsApp', {
-  getBackendBaseUrl: () => ipcRenderer.invoke('backend:base-url')
+  getBackendBaseUrl: () => ipcRenderer.invoke('backend:base-url'),
+  selectProjectDirectory: () => ipcRenderer.invoke('dialog:select-project-directory'),
+  selectImportFiles: () => ipcRenderer.invoke('dialog:select-import-files'),
+  selectImportFolder: () => ipcRenderer.invoke('dialog:select-import-folder'),
+  selectPdfFile: () => ipcRenderer.invoke('dialog:select-pdf-file')
 });

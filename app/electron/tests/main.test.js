@@ -3,7 +3,13 @@ const test = require('node:test');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { getBackendArgs, getBackendWorkingDirectory, getPythonExecutable } = require('../main');
+const {
+  getBackendArgs,
+  getBackendWorkingDirectory,
+  getImageImportFilters,
+  getPdfImportFilters,
+  getPythonExecutable
+} = require('../main');
 
 test('backend launch args run the Python module', () => {
   assert.deepStrictEqual(getBackendArgs(), ['-m', 'backend.server']);
@@ -37,4 +43,16 @@ test('python executable prefers bundled runtime when environment variable is abs
   if (original !== undefined) {
     process.env.XHS_PYTHON = original;
   }
+});
+
+test('image import filters include common image formats', () => {
+  assert.deepStrictEqual(getImageImportFilters(), [
+    { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }
+  ]);
+});
+
+test('pdf import filters include pdf only', () => {
+  assert.deepStrictEqual(getPdfImportFilters(), [
+    { name: 'PDF 文件', extensions: ['pdf'] }
+  ]);
 });

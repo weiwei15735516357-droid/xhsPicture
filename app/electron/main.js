@@ -11,6 +11,7 @@ const path = require('node:path');
 
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
+const dialog = electron.dialog;
 const ipcMain = electron.ipcMain;
 
 let backendProcess = null;
@@ -21,6 +22,14 @@ function getBackendWorkingDirectory() {
 
 function getBackendArgs() {
   return ['-m', 'backend.server'];
+}
+
+function getImageImportFilters() {
+  return [{ name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }];
+}
+
+function getPdfImportFilters() {
+  return [{ name: 'PDF 文件', extensions: ['pdf'] }];
 }
 
 function getPythonExecutable() {
@@ -97,11 +106,32 @@ if (app) {
 
   app.on('before-quit', stopBackend);
   ipcMain.handle('backend:base-url', () => 'http://127.0.0.1:8787');
+  ipcMain.handle('dialog:select-project-directory', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] });
+    return result.canceled ? null : result.filePaths[0];
+  });
+  ipcMain.handle('dialog:select-import-files', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: getImageImportFilters()
+    });
+    return result.canceled ? [] : result.filePaths;
+  });
+  ipcMain.handle('dialog:select-import-folder', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    return result.canceled ? null : result.filePaths[0];
+  });
+  ipcMain.handle('dialog:select-pdf-file', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getPdfImportFilters() });
+    return result.canceled ? null : result.filePaths[0];
+  });
 }
 
 module.exports = {
   getBackendArgs,
   getBackendWorkingDirectory,
+  getImageImportFilters,
+  getPdfImportFilters,
   getPythonExecutable,
   startBackend,
   stopBackend

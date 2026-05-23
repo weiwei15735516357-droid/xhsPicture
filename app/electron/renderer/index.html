@@ -18,34 +18,82 @@
       <button class="nav">飞书上传</button>
       <button class="nav">设置</button>
     </aside>
+
     <main class="workspace">
       <section class="topbar">
         <div>
           <h1>工作台</h1>
-          <p>导入素材、生成图片、导出并上传飞书。</p>
+          <p>本地项目、素材导入、PDF 转 PNG。</p>
         </div>
         <div id="backend-status" class="status">后端检测中</div>
       </section>
-      <section class="actions">
-        <button>新建项目</button>
-        <button>打开项目</button>
-        <button>导入素材</button>
+
+      <section class="project-bar">
+        <div>
+          <span class="label">当前项目</span>
+          <strong id="current-project">未选择项目</strong>
+        </div>
+        <div class="button-row">
+          <button id="create-project-btn">新建/选择项目</button>
+          <button id="refresh-assets-btn">刷新素材</button>
+        </div>
       </section>
-      <section class="panel-grid">
+
+      <section class="tool-grid">
         <article class="panel">
-          <h2>当前项目</h2>
-          <p id="current-project">未选择项目</p>
+          <h2>导入图片</h2>
+          <div class="button-column">
+            <button id="import-files-btn">选择图片文件</button>
+            <button id="import-folder-btn">选择图片文件夹</button>
+          </div>
+          <p id="import-summary" class="muted">支持 JPG、PNG、WEBP、BMP。</p>
         </article>
+
         <article class="panel">
-          <h2>最近任务</h2>
-          <p>暂无任务</p>
+          <h2>PDF 转 PNG</h2>
+          <div class="field-row">
+            <label for="pdf-scale">倍率</label>
+            <select id="pdf-scale">
+              <option value="1">1x</option>
+              <option value="2" selected>2x</option>
+              <option value="3">3x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label for="page-start">起始页</label>
+            <input id="page-start" type="number" min="1" placeholder="1" />
+          </div>
+          <div class="field-row">
+            <label for="page-end">结束页</label>
+            <input id="page-end" type="number" min="1" placeholder="全部" />
+          </div>
+          <label class="checkbox-row">
+            <input id="subfolder-output" type="checkbox" checked />
+            按 PDF 文件名创建子文件夹
+          </label>
+          <button id="export-pdf-btn">选择 PDF 并转换</button>
+          <p id="pdf-summary" class="muted">输出到项目 pages 目录。</p>
         </article>
+
         <article class="panel">
-          <h2>下一步</h2>
-          <p>阶段一完成后接入素材导入和文档转图。</p>
+          <h2>任务状态</h2>
+          <p id="task-summary">暂无任务</p>
+          <pre id="activity-log"></pre>
         </article>
+      </section>
+
+      <section class="asset-section">
+        <div class="section-heading">
+          <h2>素材池</h2>
+          <span id="asset-count">0 张</span>
+        </div>
+        <div id="asset-list" class="asset-list">
+          <div class="empty">暂无素材</div>
+        </div>
       </section>
     </main>
+
     <script src="app.js"></script>
   </body>
 </html>
