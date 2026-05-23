@@ -3,7 +3,9 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from backend.models.schemas import CreateLogRequest, CreateProjectRequest
+from backend.models.schemas import CreateLogRequest, CreateProjectRequest, ImportAssetsRequest
+from backend.services.asset_importer import AssetImporter
+from backend.services.asset_registry import AssetRegistry
 from backend.services.log_service import LogService
 from backend.services.project_service import ProjectService
 from backend.services.settings_store import SettingsStore
@@ -28,6 +30,16 @@ def create_app() -> FastAPI:
     @app.post("/api/project/create")
     def create_project(request: CreateProjectRequest) -> dict[str, Any]:
         return ProjectService().create_project(Path(request.project_dir))
+
+    @app.get("/api/assets")
+    def list_assets(project_dir: str) -> dict[str, Any]:
+        return {"assets": AssetRegistry(Path(project_dir)).list_assets()}
+
+    @app.post("/api/assets/import")
+    def import_assets(request: ImportAssetsRequest) -> dict[str, Any]:
+        paths_to_import = [Path(item) for item in request.paths]
+        assets = AssetImporter().import_paths(Path(request.project_dir), paths_to_import)
+        return {"assets": assets}
 
     @app.get("/api/logs")
     def list_logs() -> list[dict[str, Any]]:

@@ -28,3 +28,8 @@ class CreateLogRequest(BaseModel):
     level: str
     message: str
     context: dict = Field(default_factory=dict)
+
+
+class ImportAssetsRequest(BaseModel):
+    project_dir: str
+    paths: list[str]
