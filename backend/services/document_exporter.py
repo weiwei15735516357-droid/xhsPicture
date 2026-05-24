@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from io import BytesIO
 
 import fitz
@@ -30,6 +30,7 @@ class DocumentExporter:
         summary_group_size: int | None = 5,
         background_path: Path | None = None,
         background_has_text: bool = False,
+        progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         suffix = file_path.suffix.lower()
         if suffix == ".pdf":
@@ -43,6 +44,7 @@ class DocumentExporter:
                 summary_group_size=summary_group_size,
                 background_path=background_path,
                 background_has_text=background_has_text,
+                progress_callback=progress_callback,
             )
         if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
             converted_pdf = self.office_converter.convert_to_pdf(file_path, paths.DATA_DIR / "office_tmp")
@@ -58,6 +60,7 @@ class DocumentExporter:
                 summary_group_size=summary_group_size,
                 background_path=background_path,
                 background_has_text=background_has_text,
+                progress_callback=progress_callback,
             )
         raise ValueError(f"不支持的文档格式：{suffix}")
 
@@ -74,6 +77,7 @@ class DocumentExporter:
         summary_group_size: int | None = None,
         background_path: Path | None = None,
         background_has_text: bool = False,
+        progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         document_name = output_name or file_path.stem
         output_dir = project_dir / document_name if subfolder_output else project_dir
@@ -86,14 +90,29 @@ class DocumentExporter:
         try:
             start = max((page_start or 1), 1)
             end = min((page_end or doc.page_count), doc.page_count)
+            selected_pages = max(end - start + 1, 0)
+            output_count = (selected_pages + summary_group_size - 1) // summary_group_size if summary_group_size else selected_pages
+            total_steps = selected_pages + output_count
+            rendered_steps = 0
             matrix = fitz.Matrix(scale, scale)
             for page_number in range(start, end + 1):
                 page = doc.load_page(page_number - 1)
                 pixmap = page.get_pixmap(matrix=matrix, alpha=False)
                 page_image = Image.open(BytesIO(pixmap.tobytes("png"))).convert("RGB")
                 rendered_pages.append((page_number, page_image))
+                rendered_steps += 1
+                if progress_callback:
+                    progress_callback(rendered_steps, total_steps, f"正在渲染第 {page_number} 页")
         finally:
             doc.close()
+
+        def report_output(output_index: int, output_total: int) -> None:
+            if progress_callback:
+                progress_callback(
+                    rendered_steps + output_index,
+                    rendered_steps + output_total,
+                    f"正在生成图片 {output_index}/{output_total}",
+                )
 
         origin = str(origin_path or file_path)
         if summary_group_size:
@@ -107,13 +126,16 @@ class DocumentExporter:
                     origin,
                     background_path,
                     background_has_text,
+                    report_output,
                 )
             )
         else:
+            output_total = len(rendered_pages)
             for page_number, page_image in rendered_pages:
                 output_path = output_dir / f"{document_name}_p{page_number:03d}.png"
                 self._compose_portrait_page(page_image).save(output_path)
                 assets.append(registry.add_asset(output_path, "文档页", origin))
+                report_output(len(assets), output_total)
 
         return {"assets": assets}
 
@@ -127,9 +149,11 @@ class DocumentExporter:
         origin: str,
         background_path: Path | None,
         background_has_text: bool,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         assets = []
-        for group_index, start_index in enumerate(range(0, len(rendered_pages), group_size), start=1):
+        group_starts = list(range(0, len(rendered_pages), group_size))
+        for group_index, start_index in enumerate(group_starts, start=1):
             group = rendered_pages[start_index : start_index + group_size]
             if not group:
                 continue
@@ -139,6 +163,8 @@ class DocumentExporter:
             output_path = output_dir / f"{document_name}_汇总_{group_index:03d}_{first_page:03d}-{last_page:03d}.png"
             canvas.save(output_path)
             assets.append(registry.add_asset(output_path, "汇总图", origin))
+            if progress_callback:
+                progress_callback(group_index, len(group_starts))
         return assets
 
     def _compose_portrait_page(self, image: Image.Image) -> Image.Image:
@@ -154,14 +180,13 @@ class DocumentExporter:
         background_has_text: bool = False,
     ) -> Image.Image:
         canvas = background.copy() if background else self._create_background(background_path)
-        top = XHS_HEIGHT // 6 if background_has_text else 28
-        hero_height = 430 if background_has_text else 542
-        hero = (28, top, XHS_WIDTH - 28, top + hero_height)
+        top = XHS_HEIGHT // 6 if background_has_text else 18
+        hero = (28, top, XHS_WIDTH - 28, top + 430) if background_has_text else (4, top, XHS_WIDTH - 4, 621)
         self._paste_contained(canvas, group[0][1], hero, vertical_align="top")
         remaining = group[1:]
         slots = self._dynamic_slots(count=len(remaining), top=hero[3] + 12, bottom=XHS_HEIGHT - 28)
         for (_, image), slot in zip(remaining, slots):
-            self._paste_contained(canvas, image, slot, vertical_align="top")
+            self._paste_covered(canvas, image, slot)
         return canvas
 
     def _create_background(self, background_path: Path | None) -> Image.Image:
@@ -189,21 +214,18 @@ class DocumentExporter:
             return []
         gap = 12
         if count == 1:
-            height = min(bottom - top, int((XHS_WIDTH - 56) / (16 / 9)))
-            return [(28, top, XHS_WIDTH - 28, top + height)]
+            return [(28, top, XHS_WIDTH - 28, bottom)]
         if count == 2:
             mid = XHS_WIDTH // 2
-            height = min(bottom - top, int((mid - gap // 2 - 28) / (16 / 9)))
-            return [(28, top, mid - gap // 2, top + height), (mid + gap // 2, top, XHS_WIDTH - 28, top + height)]
+            return [(28, top, mid - gap // 2, bottom), (mid + gap // 2, top, XHS_WIDTH - 28, bottom)]
         if count == 3:
-            wide_height = min(int((XHS_WIDTH - 56) / (16 / 9)), max(1, (bottom - top - gap) // 2))
+            wide_height = max(1, (bottom - top - gap) // 2)
             lower_top = top + wide_height + gap
             mid = XHS_WIDTH // 2
-            lower_height = min(bottom - lower_top, int((mid - gap // 2 - 28) / (16 / 9)))
             return [
                 (28, top, XHS_WIDTH - 28, top + wide_height),
-                (28, lower_top, mid - gap // 2, lower_top + lower_height),
-                (mid + gap // 2, lower_top, XHS_WIDTH - 28, lower_top + lower_height),
+                (28, lower_top, mid - gap // 2, bottom),
+                (mid + gap // 2, lower_top, XHS_WIDTH - 28, bottom),
             ]
         return self._grid_slots(remaining_count=count, top=top, bottom=bottom, columns=2 if count <= 6 else 3)
 
@@ -215,8 +237,7 @@ class DocumentExporter:
         left = 28
         right = XHS_WIDTH - 28
         width = (right - left - gap * (columns - 1)) // columns
-        max_height = (bottom - top - gap * (rows - 1)) // rows
-        height = min(max_height, int(width / (16 / 9)))
+        height = (bottom - top - gap * (rows - 1)) // rows
         slots = []
         for index in range(remaining_count):
             row = index // columns

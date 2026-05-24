@@ -1,4 +1,5 @@
 from pathlib import Path
+from threading import Thread
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -58,6 +59,33 @@ def create_app() -> FastAPI:
         )
         task = task_store.create_completed("document_export", result)
         return {"task": task, "assets": result["assets"]}
+
+    @app.post("/api/documents/export/start")
+    def start_document_export(request: ExportDocumentRequest) -> dict[str, Any]:
+        task = task_store.create_running("document_export", "等待开始导出")
+
+        def run_export() -> None:
+            try:
+                result = DocumentExporter().export(
+                    project_dir=Path(request.project_dir),
+                    file_path=Path(request.file_path),
+                    scale=request.scale,
+                    page_start=request.page_start,
+                    page_end=request.page_end,
+                    subfolder_output=request.subfolder_output,
+                    summary_group_size=request.summary_group_size,
+                    background_path=Path(request.background_path) if request.background_path else None,
+                    background_has_text=request.background_has_text,
+                    progress_callback=lambda current, total, message: task_store.update_progress(
+                        task["id"], current, total, message
+                    ),
+                )
+                task_store.complete(task["id"], result)
+            except Exception as exc:
+                task_store.fail(task["id"], str(exc))
+
+        Thread(target=run_export, daemon=True).start()
+        return {"task": task}
 
     @app.get("/api/tasks/{task_id}")
     def get_task(task_id: str) -> dict[str, Any]:

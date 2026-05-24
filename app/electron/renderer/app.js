@@ -80,6 +80,28 @@ function syncSummaryControls() {
   document.getElementById('summary-group-size').disabled = !document.getElementById('summary-enabled').checked;
 }
 
+function updateProgress(progress = { percent: 0, message: '等待任务' }) {
+  const percent = Math.max(0, Math.min(Number(progress.percent || 0), 100));
+  document.getElementById('progress-bar').style.width = `${percent}%`;
+  setText('progress-percent', `${percent}%`);
+  setText('progress-label', progress.message || '正在处理');
+}
+
+async function waitForTask(taskId) {
+  while (true) {
+    const task = await api(`/api/tasks/${taskId}`);
+    updateProgress(task.progress);
+    setText('task-summary', `最近任务：${task.status}`);
+    if (task.status === 'completed') {
+      return task;
+    }
+    if (task.status === 'failed') {
+      throw new Error(task.error || '导出失败');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
 async function refreshAssets() {
   if (!requireProject()) {
     return;
@@ -140,14 +162,16 @@ async function exportPdf() {
     background_path: state.backgroundPath || null,
     background_has_text: document.getElementById('background-has-text').checked
   };
-  const data = await api('/api/documents/export', {
+  updateProgress({ percent: 0, message: '准备开始导出' });
+  const started = await api('/api/documents/export/start', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
-  setText('task-summary', `最近任务：${data.task.status}`);
+  const task = await waitForTask(started.task.id);
+  const assets = task.result.assets;
   const mode = summaryEnabled ? `${summaryGroupSize} 张叠图` : '不叠图，逐页导出';
-  setText('document-summary', `已导出 ${data.assets.length} 张 PNG（${mode}）。`);
-  appendLog(`文档转 PNG 完成，生成 ${data.assets.length} 张（${mode}）。`);
+  setText('document-summary', `已导出 ${assets.length} 张 PNG（${mode}）。`);
+  appendLog(`文档转 PNG 完成，生成 ${assets.length} 张（${mode}）。`);
   await refreshAssets();
 }
 
