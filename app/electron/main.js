@@ -13,6 +13,7 @@ const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 const dialog = electron.dialog;
 const ipcMain = electron.ipcMain;
+const shell = electron.shell;
 
 let backendProcess = null;
 
@@ -137,6 +138,10 @@ if (app) {
   ipcMain.handle('dialog:select-document-file', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getDocumentImportFilters() });
     return result.canceled ? null : result.filePaths[0];
+  });
+  ipcMain.handle('shell:show-item-in-folder', (_event, filePath) => {
+    shell.showItemInFolder(filePath);
+    return true;
   });
 }
 

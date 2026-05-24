@@ -7,6 +7,8 @@ const state = {
   followupLayout: [],
   selectedLayoutType: 'first',
   selectedLayoutIndex: 0,
+  assets: [],
+  selectedAssetId: null,
   exportInProgress: false,
   aspectGuard: localStorage.getItem('xhs.layoutAspectGuard') !== 'false'
 };
@@ -68,25 +70,84 @@ function renderProject() {
 }
 
 function renderAssets(assets) {
+  state.assets = assets;
+  if (!assets.some((asset) => asset.id === state.selectedAssetId)) {
+    state.selectedAssetId = assets[0]?.id || null;
+  }
   setText('asset-count', `${assets.length} 张`);
   const list = document.getElementById('asset-list');
   if (assets.length === 0) {
     list.innerHTML = '<div class="empty">暂无素材</div>';
+    renderAssetPreview(null);
     return;
   }
   list.innerHTML = '';
   for (const asset of assets) {
     const item = document.createElement('div');
     item.className = 'asset-item';
+    if (asset.id === state.selectedAssetId) {
+      item.classList.add('selected');
+    }
     item.innerHTML = `
-      <div>
-        <strong>${asset.filename}</strong>
-        <span>${asset.source_type}</span>
+      <img class="asset-thumb" src="${fileUrl(asset.path)}" alt="${escapeHtml(asset.filename)}" />
+      <strong>${escapeHtml(asset.filename)}</strong>
+      <div class="asset-meta">
+        <span>${escapeHtml(asset.source_type || '')}</span>
+        <span>${formatDimensions(asset)}</span>
       </div>
-      <small>${asset.path}</small>
     `;
+    item.addEventListener('click', () => {
+      state.selectedAssetId = asset.id;
+      renderAssets(state.assets);
+    });
     list.appendChild(item);
   }
+  renderAssetPreview(selectedAsset());
+}
+
+function selectedAsset() {
+  return state.assets.find((asset) => asset.id === state.selectedAssetId) || null;
+}
+
+function renderAssetPreview(asset) {
+  document.getElementById('asset-preview-empty').classList.toggle('hidden-panel', Boolean(asset));
+  document.getElementById('asset-preview-detail').classList.toggle('hidden-panel', !asset);
+  if (!asset) {
+    return;
+  }
+  document.getElementById('asset-preview-image').src = fileUrl(asset.path);
+  setText('asset-preview-name', asset.filename);
+  setText('asset-preview-meta', `${asset.source_type || ''} · ${formatDimensions(asset)} · ${formatFileSize(asset.file_size)}`);
+  setText('asset-preview-path', asset.path);
+}
+
+function fileUrl(path) {
+  return encodeURI(`file:///${path.replace(/\\/g, '/')}`);
+}
+
+function formatDimensions(asset) {
+  return asset.width && asset.height ? `${asset.width}×${asset.height}` : '未知尺寸';
+}
+
+function formatFileSize(size) {
+  const value = Number(size || 0);
+  if (value >= 1024 * 1024) {
+    return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  }
+  if (value >= 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+  return `${value} B`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
 }
 
 function syncSummaryControls() {
@@ -402,8 +463,40 @@ async function refreshAssets() {
   if (!requireProject()) {
     return;
   }
-  const data = await api(`/api/assets?project_dir=${encodeURIComponent(state.projectDir)}`);
+  const params = new URLSearchParams({
+    project_dir: state.projectDir,
+    sort: document.getElementById('asset-sort').value
+  });
+  const sourceType = document.getElementById('asset-source-filter').value;
+  const query = document.getElementById('asset-search').value.trim();
+  if (sourceType) {
+    params.set('source_type', sourceType);
+  }
+  if (query) {
+    params.set('q', query);
+  }
+  const data = await api(`/api/assets?${params.toString()}`);
   renderAssets(data.assets);
+}
+
+async function deleteSelectedAsset() {
+  if (!requireProject()) {
+    return;
+  }
+  const asset = selectedAsset();
+  if (!asset) {
+    appendLog('请先选择要删除的素材。');
+    return;
+  }
+  const deleteFile = document.getElementById('asset-delete-file').checked;
+  const params = new URLSearchParams({
+    project_dir: state.projectDir,
+    delete_file: deleteFile ? 'true' : 'false'
+  });
+  await api(`/api/assets/${asset.id}?${params.toString()}`, { method: 'DELETE' });
+  appendLog(deleteFile ? `已删除素材和本地文件：${asset.filename}` : `已删除素材记录：${asset.filename}`);
+  state.selectedAssetId = null;
+  await refreshAssets();
 }
 
 async function createProject() {
@@ -502,6 +595,16 @@ async function runExportAction() {
 
 document.getElementById('create-project-btn').addEventListener('click', () => runAction(createProject));
 document.getElementById('refresh-assets-btn').addEventListener('click', () => runAction(refreshAssets));
+document.getElementById('asset-search').addEventListener('input', () => runAction(refreshAssets));
+document.getElementById('asset-source-filter').addEventListener('change', () => runAction(refreshAssets));
+document.getElementById('asset-sort').addEventListener('change', () => runAction(refreshAssets));
+document.getElementById('asset-open-folder-btn').addEventListener('click', () => {
+  const asset = selectedAsset();
+  if (asset) {
+    window.xhsApp.showItemInFolder(asset.path);
+  }
+});
+document.getElementById('asset-delete-record-btn').addEventListener('click', () => runAction(deleteSelectedAsset));
 document.getElementById('import-files-btn').addEventListener('click', async () => {
   await runAction(async () => importPaths(await window.xhsApp.selectImportFiles()));
 });

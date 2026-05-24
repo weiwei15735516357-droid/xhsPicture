@@ -147,8 +147,42 @@
           <h2>素材池</h2>
           <span id="asset-count">0 张</span>
         </div>
-        <div id="asset-list" class="asset-list">
-          <div class="empty">暂无素材</div>
+        <div class="asset-toolbar">
+          <input id="asset-search" type="search" placeholder="搜索文件名" />
+          <select id="asset-source-filter">
+            <option value="">全部来源</option>
+            <option value="汇总图">汇总图</option>
+            <option value="文档页">文档页</option>
+            <option value="普通图片">普通图片</option>
+          </select>
+          <select id="asset-sort">
+            <option value="created_desc">最新优先</option>
+            <option value="created_asc">最早优先</option>
+            <option value="filename_asc">文件名 A-Z</option>
+            <option value="filename_desc">文件名 Z-A</option>
+          </select>
+        </div>
+        <div class="asset-workspace">
+          <div id="asset-list" class="asset-list">
+            <div class="empty">暂无素材</div>
+          </div>
+          <aside class="asset-preview">
+            <div id="asset-preview-empty" class="empty">选择一张图片查看预览</div>
+            <div id="asset-preview-detail" class="preview-detail hidden-panel">
+              <img id="asset-preview-image" alt="素材预览" />
+              <strong id="asset-preview-name"></strong>
+              <p id="asset-preview-meta" class="muted"></p>
+              <small id="asset-preview-path"></small>
+              <div class="button-row">
+                <button id="asset-open-folder-btn">打开文件夹</button>
+                <button id="asset-delete-record-btn">删除记录</button>
+              </div>
+              <label class="checkbox-row compact-checkbox">
+                <input id="asset-delete-file" type="checkbox" />
+                同时删除本地文件
+              </label>
+            </div>
+          </aside>
         </div>
       </section>
     </main>

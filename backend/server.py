@@ -35,14 +35,22 @@ def create_app() -> FastAPI:
         return ProjectService().create_project(Path(request.project_dir))
 
     @app.get("/api/assets")
-    def list_assets(project_dir: str) -> dict[str, Any]:
-        return {"assets": AssetRegistry(Path(project_dir)).list_assets()}
+    def list_assets(project_dir: str, source_type: str | None = None, q: str | None = None, sort: str = "created_desc") -> dict[str, Any]:
+        return {"assets": AssetRegistry(Path(project_dir)).list_assets(source_type=source_type, query=q, sort=sort)}
 
     @app.post("/api/assets/import")
     def import_assets(request: ImportAssetsRequest) -> dict[str, Any]:
         paths_to_import = [Path(item) for item in request.paths]
         assets = AssetImporter().import_paths(Path(request.project_dir), paths_to_import)
         return {"assets": assets}
+
+    @app.delete("/api/assets/{asset_id}")
+    def delete_asset(asset_id: str, project_dir: str, delete_file: bool = False) -> dict[str, Any]:
+        try:
+            asset = AssetRegistry(Path(project_dir)).delete_asset(asset_id, delete_file=delete_file)
+        except KeyError:
+            raise HTTPException(status_code=404, detail="Asset not found") from None
+        return {"asset": asset}
 
     @app.post("/api/documents/export")
     def export_document(request: ExportDocumentRequest) -> dict[str, Any]:
