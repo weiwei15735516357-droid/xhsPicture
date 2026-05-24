@@ -7,8 +7,15 @@ const state = {
   followupLayout: [],
   selectedLayoutType: 'first',
   selectedLayoutIndex: 0,
-  exportInProgress: false
+  exportInProgress: false,
+  aspectGuard: localStorage.getItem('xhs.layoutAspectGuard') !== 'false'
 };
+
+const CANVAS_ASPECT_RATIO = 3 / 4;
+const PPT_ASPECT_RATIO = 16 / 9;
+const SLOT_HEIGHT_PER_WIDTH = CANVAS_ASPECT_RATIO / PPT_ASPECT_RATIO;
+const MIN_SLOT_WIDTH = 0.08;
+const MIN_SLOT_HEIGHT = 0.06;
 
 function setText(id, text) {
   document.getElementById(id).textContent = text;
@@ -256,7 +263,8 @@ async function importLayoutConfig(file) {
 }
 
 function updateLayoutSummary() {
-  setText('layout-summary', `首图 ${state.layout.length} 个坑位，后续页 ${state.followupLayout.length} 个坑位。点击对应排版区坑位后，可复制/删除当前排版区。`);
+  const guard = state.aspectGuard ? '防裁剪比例已开启，调大小时按 16:9 等比缩放。' : '防裁剪比例已关闭，坑位可自由拉伸。';
+  setText('layout-summary', `首图 ${state.layout.length} 个坑位，后续页 ${state.followupLayout.length} 个坑位。${guard}`);
 }
 
 function renderLayoutTool(reload = false) {
@@ -308,8 +316,9 @@ function startLayoutDrag(event, index, type) {
     const dx = (moveEvent.clientX - start.x) / rect.width;
     const dy = (moveEvent.clientY - start.y) / rect.height;
     if (resizing) {
-      slot.width = Math.max(0.08, Math.min(1 - slot.x, start.slot.width + dx));
-      slot.height = Math.max(0.06, Math.min(1 - slot.y, start.slot.height + dy));
+      const resized = state.aspectGuard ? resizeSlotWithAspect(start.slot, dx, dy) : resizeSlotFreely(start.slot, dx, dy);
+      slot.width = resized.width;
+      slot.height = resized.height;
     } else {
       slot.x = Math.max(0, Math.min(1 - slot.width, start.slot.x + dx));
       slot.y = Math.max(0, Math.min(1 - slot.height, start.slot.y + dy));
@@ -327,6 +336,44 @@ function startLayoutDrag(event, index, type) {
     target.onpointerup = null;
     target.onpointercancel = null;
   };
+}
+
+function resizeSlotFreely(startSlot, dx, dy) {
+  return {
+    width: Math.max(MIN_SLOT_WIDTH, Math.min(1 - startSlot.x, startSlot.width + dx)),
+    height: Math.max(MIN_SLOT_HEIGHT, Math.min(1 - startSlot.y, startSlot.height + dy))
+  };
+}
+
+function resizeSlotWithAspect(startSlot, dx, dy) {
+  const maxWidth = 1 - startSlot.x;
+  const maxHeight = 1 - startSlot.y;
+  let width;
+  let height;
+  if (Math.abs(dy) > Math.abs(dx)) {
+    height = Math.max(MIN_SLOT_HEIGHT, Math.min(maxHeight, startSlot.height + dy));
+    width = height / SLOT_HEIGHT_PER_WIDTH;
+  } else {
+    width = Math.max(MIN_SLOT_WIDTH, Math.min(maxWidth, startSlot.width + dx));
+    height = width * SLOT_HEIGHT_PER_WIDTH;
+  }
+  if (width > maxWidth) {
+    width = maxWidth;
+    height = width * SLOT_HEIGHT_PER_WIDTH;
+  }
+  if (height > maxHeight) {
+    height = maxHeight;
+    width = height / SLOT_HEIGHT_PER_WIDTH;
+  }
+  return {
+    width: Math.max(MIN_SLOT_WIDTH, width),
+    height: Math.max(MIN_SLOT_HEIGHT, height)
+  };
+}
+
+function syncAspectGuardControl() {
+  const checkbox = document.getElementById('layout-aspect-guard');
+  checkbox.checked = state.aspectGuard;
 }
 
 function updateProgress(progress = { percent: 0, message: '等待任务' }) {
@@ -509,6 +556,11 @@ document.getElementById('layout-export-config-btn').addEventListener('click', ex
 document.getElementById('layout-import-config-btn').addEventListener('click', () => {
   document.getElementById('layout-import-file').click();
 });
+document.getElementById('layout-aspect-guard').addEventListener('change', (event) => {
+  state.aspectGuard = event.target.checked;
+  localStorage.setItem('xhs.layoutAspectGuard', state.aspectGuard ? 'true' : 'false');
+  updateLayoutSummary();
+});
 document.getElementById('layout-import-file').addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) {
@@ -531,6 +583,7 @@ document.getElementById('select-document-btn').addEventListener('click', () => r
 document.getElementById('start-export-btn').addEventListener('click', runExportAction);
 
 renderProject();
+syncAspectGuardControl();
 syncSummaryControls();
 renderLayoutTool();
 refreshBackendStatus();
