@@ -52,3 +52,4 @@ class ExportDocumentRequest(BaseModel):
     summary_group_size: int | None = Field(default=5, ge=5, le=9)
     background_path: str | None = None
     custom_layout: list[LayoutSlot] | None = None
+    followup_layout: list[LayoutSlot] | None = None

@@ -3,7 +3,8 @@ const state = {
   projectDir: localStorage.getItem('xhs.currentProjectDir') || null,
   backgroundPath: localStorage.getItem('xhs.backgroundPath') || null,
   documentPath: null,
-  layout: []
+  layout: [],
+  followupLayout: []
 };
 
 function setText(id, text) {
@@ -117,28 +118,44 @@ function defaultLayout(count) {
 }
 
 function getLayoutKey() {
-  return `xhs.layout.${document.getElementById('summary-group-size').value}`;
+  return `xhs.layout.first.${document.getElementById('summary-group-size').value}`;
+}
+
+function getFollowupLayoutKey() {
+  return `xhs.layout.followup.${document.getElementById('summary-group-size').value}`;
 }
 
 function loadLayout() {
   const count = Number(document.getElementById('summary-group-size').value);
   const saved = localStorage.getItem(getLayoutKey());
+  const followupSaved = localStorage.getItem(getFollowupLayoutKey());
   state.layout = saved ? JSON.parse(saved) : defaultLayout(count);
+  state.followupLayout = followupSaved ? JSON.parse(followupSaved) : defaultLayout(count);
 }
 
 function saveLayout() {
   localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
-  setText('layout-summary', '排版已保存，本机下次导出继续使用。');
+  setText('layout-summary', '首图排版已保存。');
+}
+
+function saveFollowupLayout() {
+  localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
+  setText('layout-summary', '后续页排版已保存。');
 }
 
 function renderLayoutTool() {
-  const canvas = document.getElementById('layout-canvas');
-  if (!canvas) {
+  if (!document.getElementById('layout-canvas')) {
     return;
   }
   loadLayout();
+  renderLayoutCanvas('layout-canvas', state.layout, 'first');
+  renderLayoutCanvas('followup-layout-canvas', state.followupLayout, 'followup');
+}
+
+function renderLayoutCanvas(canvasId, layout, type) {
+  const canvas = document.getElementById(canvasId);
   canvas.innerHTML = '';
-  state.layout.forEach((slot, index) => {
+  layout.forEach((slot, index) => {
     const item = document.createElement('div');
     item.className = 'layout-slot';
     item.textContent = index + 1;
@@ -146,19 +163,22 @@ function renderLayoutTool() {
     item.style.top = `${slot.y * 100}%`;
     item.style.width = `${slot.width * 100}%`;
     item.style.height = `${slot.height * 100}%`;
-    item.addEventListener('pointerdown', (event) => startLayoutDrag(event, index));
+    item.addEventListener('pointerdown', (event) => startLayoutDrag(event, index, type));
     canvas.appendChild(item);
   });
 }
 
-function startLayoutDrag(event, index) {
-  const canvas = document.getElementById('layout-canvas');
+function startLayoutDrag(event, index, type) {
+  event.preventDefault();
+  const layout = type === 'followup' ? state.followupLayout : state.layout;
+  const canvas = event.currentTarget.closest('.layout-canvas');
   const rect = canvas.getBoundingClientRect();
-  const slot = state.layout[index];
+  const slot = layout[index];
   const resizing = event.offsetX > event.currentTarget.clientWidth - 18 && event.offsetY > event.currentTarget.clientHeight - 18;
   const start = { x: event.clientX, y: event.clientY, slot: { ...slot } };
-  event.currentTarget.setPointerCapture(event.pointerId);
-  event.currentTarget.onpointermove = (moveEvent) => {
+  const target = event.currentTarget;
+  target.setPointerCapture(event.pointerId);
+  target.onpointermove = (moveEvent) => {
     const dx = (moveEvent.clientX - start.x) / rect.width;
     const dy = (moveEvent.clientY - start.y) / rect.height;
     if (resizing) {
@@ -168,10 +188,18 @@ function startLayoutDrag(event, index) {
       slot.x = Math.max(0, Math.min(1 - slot.width, start.slot.x + dx));
       slot.y = Math.max(0, Math.min(1 - slot.height, start.slot.y + dy));
     }
-    moveEvent.currentTarget.style.left = `${slot.x * 100}%`;
-    moveEvent.currentTarget.style.top = `${slot.y * 100}%`;
-    moveEvent.currentTarget.style.width = `${slot.width * 100}%`;
-    moveEvent.currentTarget.style.height = `${slot.height * 100}%`;
+    target.style.left = `${slot.x * 100}%`;
+    target.style.top = `${slot.y * 100}%`;
+    target.style.width = `${slot.width * 100}%`;
+    target.style.height = `${slot.height * 100}%`;
+  };
+  target.onpointerup = target.onpointercancel = (endEvent) => {
+    if (target.hasPointerCapture(endEvent.pointerId)) {
+      target.releasePointerCapture(endEvent.pointerId);
+    }
+    target.onpointermove = null;
+    target.onpointerup = null;
+    target.onpointercancel = null;
   };
 }
 
@@ -255,7 +283,8 @@ async function exportPdf() {
     subfolder_output: document.getElementById('subfolder-output').checked,
     summary_group_size: summaryEnabled ? Number(summaryGroupSize) : null,
     background_path: state.backgroundPath || null,
-    custom_layout: summaryEnabled ? state.layout : null
+    custom_layout: summaryEnabled ? state.layout : null,
+    followup_layout: summaryEnabled ? state.followupLayout : null
   };
   updateProgress({ percent: 0, message: '准备开始导出' });
   const started = await api('/api/documents/export/start', {
@@ -308,6 +337,11 @@ document.getElementById('layout-reset-btn').addEventListener('click', () => {
   renderLayoutTool();
 });
 document.getElementById('layout-save-btn').addEventListener('click', saveLayout);
+document.getElementById('followup-layout-reset-btn').addEventListener('click', () => {
+  localStorage.removeItem(getFollowupLayoutKey());
+  renderLayoutTool();
+});
+document.getElementById('followup-layout-save-btn').addEventListener('click', saveFollowupLayout);
 document.getElementById('select-document-btn').addEventListener('click', () => runAction(async () => {
   const selected = await window.xhsApp.selectDocumentFile();
   if (!selected) {

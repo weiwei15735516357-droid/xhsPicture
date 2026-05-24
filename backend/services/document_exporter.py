@@ -30,6 +30,7 @@ class DocumentExporter:
         summary_group_size: int | None = 5,
         background_path: Path | None = None,
         custom_layout: list[dict[str, float]] | None = None,
+        followup_layout: list[dict[str, float]] | None = None,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         suffix = file_path.suffix.lower()
@@ -44,6 +45,7 @@ class DocumentExporter:
                 summary_group_size=summary_group_size,
                 background_path=background_path,
                 custom_layout=custom_layout,
+                followup_layout=followup_layout,
                 progress_callback=progress_callback,
             )
         if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
@@ -60,6 +62,7 @@ class DocumentExporter:
                 summary_group_size=summary_group_size,
                 background_path=background_path,
                 custom_layout=custom_layout,
+                followup_layout=followup_layout,
                 progress_callback=progress_callback,
             )
         raise ValueError(f"不支持的文档格式：{suffix}")
@@ -77,6 +80,7 @@ class DocumentExporter:
         summary_group_size: int | None = None,
         background_path: Path | None = None,
         custom_layout: list[dict[str, float]] | None = None,
+        followup_layout: list[dict[str, float]] | None = None,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         document_name = output_name or file_path.stem
@@ -126,6 +130,7 @@ class DocumentExporter:
                     origin,
                     background_path,
                     custom_layout,
+                    followup_layout,
                     report_output,
                 )
             )
@@ -149,6 +154,7 @@ class DocumentExporter:
         origin: str,
         background_path: Path | None,
         custom_layout: list[dict[str, float]] | None,
+        followup_layout: list[dict[str, float]] | None,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         assets = []
@@ -159,7 +165,8 @@ class DocumentExporter:
                 continue
             first_page = group[0][0]
             last_page = group[-1][0]
-            canvas = self._compose_summary(group, background_path=background_path, custom_layout=custom_layout)
+            layout = custom_layout if group_index == 1 else (followup_layout or custom_layout)
+            canvas = self._compose_summary(group, background_path=background_path, custom_layout=layout)
             output_path = output_dir / f"{document_name}_汇总_{group_index:03d}_{first_page:03d}-{last_page:03d}.png"
             canvas.save(output_path)
             assets.append(registry.add_asset(output_path, "汇总图", origin))

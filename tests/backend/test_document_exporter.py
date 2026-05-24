@@ -5,6 +5,7 @@ from PIL import Image
 from fastapi.testclient import TestClient
 
 from backend.server import create_app
+from backend.services.asset_registry import AssetRegistry
 from backend.services.document_exporter import DocumentExporter
 from backend.services.project_service import ProjectService
 
@@ -140,6 +141,36 @@ def test_summary_uses_custom_layout_slots():
 
     assert image.getpixel((540, 120)) == (180, 20, 20)
     assert image.getpixel((120, 1000)) == (20, 40, 180)
+
+
+def test_followup_summary_groups_use_followup_layout(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    rendered_pages = [
+        (index, Image.new("RGB", (1600, 900), (180 if index <= 5 else 20, 20, 180)))
+        for index in range(1, 11)
+    ]
+
+    output_dir = project_dir / "deck"
+    output_dir.mkdir()
+    assets = DocumentExporter()._save_summary_groups(
+        registry=AssetRegistry(project_dir),
+        output_dir=output_dir,
+        document_name="deck",
+        rendered_pages=rendered_pages,
+        group_size=5,
+        origin="test",
+        background_path=None,
+        custom_layout=[{"x": 0, "y": 0, "width": 1, "height": 0.5}],
+        followup_layout=[{"x": 0, "y": 0.5, "width": 1, "height": 0.5}],
+    )
+
+    first = Image.open(assets[0]["path"]).convert("RGB")
+    second = Image.open(assets[1]["path"]).convert("RGB")
+    assert first.getpixel((540, 120)) == (180, 20, 180)
+    assert first.getpixel((540, 1200)) == (248, 250, 252)
+    assert second.getpixel((540, 120)) == (248, 250, 252)
+    assert second.getpixel((540, 1200)) == (20, 20, 180)
 
 
 def test_document_export_root_contains_only_document_output_folder(tmp_path: Path):

@@ -96,11 +96,24 @@
           <p id="document-summary" class="muted">默认 5 张合并，输出到“文档同名文件夹”。</p>
           <details class="layout-tool">
             <summary>排版工具</summary>
-            <div class="button-row layout-buttons">
-              <button id="layout-reset-btn">重置坑位</button>
-              <button id="layout-save-btn">保存排版</button>
+            <div class="layout-columns">
+              <div>
+                <strong>首图排版</strong>
+                <div class="button-row layout-buttons">
+                  <button id="layout-reset-btn">重置首图</button>
+                  <button id="layout-save-btn">保存首图</button>
+                </div>
+                <div id="layout-canvas" class="layout-canvas"></div>
+              </div>
+              <div>
+                <strong>后续页排版</strong>
+                <div class="button-row layout-buttons">
+                  <button id="followup-layout-reset-btn">重置后续页</button>
+                  <button id="followup-layout-save-btn">保存后续页</button>
+                </div>
+                <div id="followup-layout-canvas" class="layout-canvas"></div>
+              </div>
             </div>
-            <div id="layout-canvas" class="layout-canvas"></div>
             <p id="layout-summary" class="muted">拖动坑位移动，右下角拖动可调整大小。</p>
           </details>
         </article>

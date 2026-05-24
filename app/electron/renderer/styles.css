@@ -258,9 +258,17 @@ input {
   margin: 12px 0;
 }
 
+.layout-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .layout-canvas {
   position: relative;
-  width: min(100%, 270px);
+  width: 100%;
+  max-width: 270px;
   aspect-ratio: 3 / 4;
   border: 1px solid #cbd2d9;
   background: #f8fafc;
