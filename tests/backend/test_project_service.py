@@ -1,21 +1,20 @@
-import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from backend.services.asset_registry import AssetRegistry
 from backend.server import create_app
 from backend.services.project_service import ProjectService
 
 
-def test_create_project_initializes_lightweight_project_metadata(tmp_path: Path):
+def test_create_project_leaves_output_directory_empty(tmp_path: Path):
     service = ProjectService()
     project_dir = tmp_path / "MayCampaign"
 
     result = service.create_project(project_dir)
 
     assert result["project_dir"] == str(project_dir)
-    assert (project_dir / "project.json").is_file()
-    assert [child.name for child in project_dir.iterdir()] == ["project.json"]
+    assert list(project_dir.iterdir()) == []
 
 
 def test_create_project_initializes_project_json(tmp_path: Path):
@@ -23,7 +22,7 @@ def test_create_project_initializes_project_json(tmp_path: Path):
     project_dir = tmp_path / "MayCampaign"
 
     service.create_project(project_dir)
-    data = json.loads((project_dir / "project.json").read_text(encoding="utf-8"))
+    data = AssetRegistry(project_dir)._load_project()
 
     assert data["name"] == "MayCampaign"
     assert data["assets"] == []
@@ -39,4 +38,4 @@ def test_create_project_api_returns_created_project(tmp_path: Path):
 
     assert response.status_code == 200
     assert response.json()["project_dir"] == str(project_dir)
-    assert (project_dir / "project.json").is_file()
+    assert list(project_dir.iterdir()) == []

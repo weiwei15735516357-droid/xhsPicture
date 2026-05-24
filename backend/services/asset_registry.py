@@ -4,11 +4,13 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from backend.services.project_paths import project_state_file
+
 
 class AssetRegistry:
     def __init__(self, project_dir: Path):
         self.project_dir = project_dir
-        self.project_file = project_dir / "project.json"
+        self.project_file = project_state_file(project_dir)
 
     def add_asset(self, path: Path, source_type: str, origin: str) -> dict[str, Any]:
         project = self._load_project()
@@ -28,6 +30,11 @@ class AssetRegistry:
         return self._load_project().get("assets", [])
 
     def _load_project(self) -> dict[str, Any]:
+        legacy_project_file = self.project_dir / "project.json"
+        if not self.project_file.exists() and legacy_project_file.exists():
+            self.project_file.parent.mkdir(parents=True, exist_ok=True)
+            self.project_file.write_text(legacy_project_file.read_text(encoding="utf-8"), encoding="utf-8")
+            legacy_project_file.unlink()
         return json.loads(self.project_file.read_text(encoding="utf-8"))
 
     def _save_project(self, project: dict[str, Any]) -> None:

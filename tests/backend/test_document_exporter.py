@@ -100,6 +100,27 @@ def test_pdf_export_groups_pages_into_summary_images(tmp_path: Path):
     assert all(asset["source_type"] == "汇总图" for asset in assets)
 
 
+def test_document_export_root_contains_only_document_output_folder(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    pdf_path = tmp_path / "deck.pdf"
+    _create_pdf(pdf_path, pages=3)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/documents/export",
+        json={
+            "project_dir": str(project_dir),
+            "file_path": str(pdf_path),
+            "scale": 1,
+            "summary_group_size": 5,
+        },
+    )
+
+    assert response.status_code == 200
+    assert sorted(child.name for child in project_dir.iterdir()) == ["deck"]
+
+
 def test_summary_uses_uploaded_background_image(tmp_path: Path):
     project_dir = tmp_path / "ProjectA"
     ProjectService().create_project(project_dir)

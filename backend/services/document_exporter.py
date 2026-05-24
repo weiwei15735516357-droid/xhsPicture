@@ -7,6 +7,7 @@ from PIL import Image
 
 from backend.services.asset_registry import AssetRegistry
 from backend.services.office_converter import POWERPOINT_EXTENSIONS, WORD_EXTENSIONS, OfficeConverter
+from backend.storage import paths
 
 
 XHS_WIDTH = 1080
@@ -44,7 +45,7 @@ class DocumentExporter:
                 background_has_text=background_has_text,
             )
         if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
-            converted_pdf = self.office_converter.convert_to_pdf(file_path, project_dir / "pages" / "_office_pdf")
+            converted_pdf = self.office_converter.convert_to_pdf(file_path, paths.DATA_DIR / "office_tmp")
             return self.export_pdf(
                 project_dir,
                 converted_pdf,

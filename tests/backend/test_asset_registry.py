@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from backend.services.asset_registry import AssetRegistry
@@ -17,7 +16,7 @@ def test_asset_registry_adds_image_asset_to_project_json(tmp_path: Path):
     assert asset["id"]
     assert asset["path"] == str(image_path)
     assert asset["source_type"] == "普通图片"
-    project = json.loads((project_dir / "project.json").read_text(encoding="utf-8"))
+    project = AssetRegistry(project_dir)._load_project()
     assert project["assets"][0]["id"] == asset["id"]
 
 

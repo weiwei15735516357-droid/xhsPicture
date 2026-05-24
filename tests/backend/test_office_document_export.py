@@ -4,6 +4,7 @@ import fitz
 import pytest
 
 from backend.services.document_exporter import DocumentExporter
+from backend.services.project_service import ProjectService
 
 
 class FakeOfficeConverter:
@@ -25,11 +26,7 @@ def _create_pdf(path: Path) -> None:
 
 
 def _create_project(project_dir: Path) -> None:
-    (project_dir / "pages").mkdir(parents=True)
-    (project_dir / "project.json").write_text(
-        '{"name":"P","assets":[],"tasks":[],"templates":[],"exports":[]}',
-        encoding="utf-8",
-    )
+    ProjectService().create_project(project_dir)
 
 
 def test_docx_export_uses_office_converter_then_renders_pdf(tmp_path: Path):
@@ -51,6 +48,8 @@ def test_docx_export_uses_office_converter_then_renders_pdf(tmp_path: Path):
     )
 
     assert converter.converted[0][0] == source_docx
+    assert converter.converted[0][1] != project_dir / "pages" / "_office_pdf"
+    assert not (project_dir / "pages").exists()
     assert len(result["assets"]) == 1
     assert Path(result["assets"][0]["path"]).suffix == ".png"
 
