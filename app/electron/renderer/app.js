@@ -1,7 +1,8 @@
 const state = {
   baseUrl: null,
   projectDir: localStorage.getItem('xhs.currentProjectDir') || null,
-  backgroundPath: localStorage.getItem('xhs.backgroundPath') || null
+  backgroundPath: localStorage.getItem('xhs.backgroundPath') || null,
+  documentPath: null
 };
 
 function setText(id, text) {
@@ -143,8 +144,8 @@ async function exportPdf() {
   if (!requireProject()) {
     return;
   }
-  const filePath = await window.xhsApp.selectDocumentFile();
-  if (!filePath) {
+  if (!state.documentPath) {
+    appendLog('请先选择 PPT/Word/PDF 文件。');
     return;
   }
   const pageStart = document.getElementById('page-start').value;
@@ -153,7 +154,7 @@ async function exportPdf() {
   const summaryGroupSize = document.getElementById('summary-group-size').value;
   const payload = {
     project_dir: state.projectDir,
-    file_path: filePath,
+    file_path: state.documentPath,
     scale: Number(document.getElementById('pdf-scale').value),
     page_start: pageStart ? Number(pageStart) : null,
     page_end: pageEnd ? Number(pageEnd) : null,
@@ -207,7 +208,16 @@ document.getElementById('background-image-btn').addEventListener('click', async 
   });
 });
 document.getElementById('summary-enabled').addEventListener('change', syncSummaryControls);
-document.getElementById('export-document-btn').addEventListener('click', () => runAction(exportPdf));
+document.getElementById('select-document-btn').addEventListener('click', () => runAction(async () => {
+  const selected = await window.xhsApp.selectDocumentFile();
+  if (!selected) {
+    return;
+  }
+  state.documentPath = selected;
+  setText('document-summary', `已选择：${selected}`);
+  appendLog(`已选择文档：${selected}`);
+}));
+document.getElementById('start-export-btn').addEventListener('click', () => runAction(exportPdf));
 
 renderProject();
 syncSummaryControls();

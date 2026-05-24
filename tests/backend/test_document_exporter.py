@@ -178,8 +178,8 @@ def test_summary_slots_crop_to_fill_without_white_card_padding():
     image = exporter._compose_summary([(1, red), (2, blue), (3, green)]).convert("RGB")
 
     assert image.getpixel((540, 36)) == (180, 20, 20)
-    assert image.getpixel((36, 640)) == (20, 40, 180)
-    assert image.getpixel((560, 640)) == (20, 140, 70)
+    assert image.getpixel((36, 1130)) == (20, 40, 180)
+    assert image.getpixel((560, 1130)) == (20, 140, 70)
 
 
 def test_summary_reserves_top_space_when_background_has_text():
@@ -193,15 +193,18 @@ def test_summary_reserves_top_space_when_background_has_text():
     assert image.getpixel((540, 260)) == (180, 20, 20)
 
 
-def test_summary_thumbnails_fill_lower_area_to_bottom():
+def test_summary_thumbnails_preserve_edges_and_reach_bottom():
     exporter = DocumentExporter()
     hero = Image.new("RGB", (1600, 900), (180, 20, 20))
     thumbnail = Image.new("RGB", (1600, 900), (20, 40, 180))
+    for x in range(0, 120):
+        for y in range(900):
+            thumbnail.putpixel((x, y), (250, 210, 40))
 
-    image = exporter._compose_summary([(1, hero), (2, thumbnail)]).convert("RGB")
+    image = exporter._compose_summary([(1, hero), (2, thumbnail), (3, thumbnail), (4, thumbnail), (5, thumbnail)]).convert("RGB")
 
-    assert image.getpixel((32, 640)) == (20, 40, 180)
-    assert image.getpixel((540, 1410)) == (20, 40, 180)
+    assert image.getpixel((32, 840)) == (250, 210, 40)
+    assert image.getpixel((700, 1410)) == (20, 40, 180)
 
 
 def test_summary_hero_is_larger_and_lower_grid_reaches_bottom():

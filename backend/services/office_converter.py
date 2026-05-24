@@ -17,15 +17,21 @@ class OfficeConverter:
         if not self.is_available():
             raise RuntimeError("Microsoft Office 或 pywin32 不可用，无法转换 Word/PPT。")
 
+        import pythoncom
+
         suffix = file_path.suffix.lower()
         output_dir.mkdir(parents=True, exist_ok=True)
         output_pdf = output_dir / f"{file_path.stem}.pdf"
-        if suffix in WORD_EXTENSIONS:
-            self._convert_word(file_path, output_pdf)
-            return output_pdf
-        if suffix in POWERPOINT_EXTENSIONS:
-            self._convert_powerpoint(file_path, output_pdf)
-            return output_pdf
+        pythoncom.CoInitialize()
+        try:
+            if suffix in WORD_EXTENSIONS:
+                self._convert_word(file_path, output_pdf)
+                return output_pdf
+            if suffix in POWERPOINT_EXTENSIONS:
+                self._convert_powerpoint(file_path, output_pdf)
+                return output_pdf
+        finally:
+            pythoncom.CoUninitialize()
         raise ValueError(f"不支持的 Office 文档格式：{suffix}")
 
     def _convert_word(self, file_path: Path, output_pdf: Path) -> None:

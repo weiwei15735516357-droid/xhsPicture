@@ -1,9 +1,11 @@
 from pathlib import Path
+import sys
 
 import fitz
 import pytest
 
 from backend.services.document_exporter import DocumentExporter
+from backend.services.office_converter import OfficeConverter
 from backend.services.project_service import ProjectService
 
 
@@ -67,3 +69,33 @@ def test_unsupported_document_extension_fails_clearly(tmp_path: Path):
             page_end=None,
             subfolder_output=True,
         )
+
+
+def test_office_converter_initializes_com_for_threaded_conversion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    calls = []
+
+    class FakePythonCom:
+        @staticmethod
+        def CoInitialize():
+            calls.append("init")
+
+        @staticmethod
+        def CoUninitialize():
+            calls.append("uninit")
+
+    class Converter(OfficeConverter):
+        def is_available(self) -> bool:
+            return True
+
+        def _convert_powerpoint(self, file_path: Path, output_pdf: Path) -> None:
+            calls.append("convert")
+            output_pdf.write_bytes(b"pdf")
+
+    monkeypatch.setitem(sys.modules, "pythoncom", FakePythonCom)
+    source = tmp_path / "deck.pptx"
+    source.write_bytes(b"ppt")
+
+    output = Converter().convert_to_pdf(source, tmp_path / "out")
+
+    assert output.is_file()
+    assert calls == ["init", "convert", "uninit"]

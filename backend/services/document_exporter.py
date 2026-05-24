@@ -186,7 +186,7 @@ class DocumentExporter:
         remaining = group[1:]
         slots = self._dynamic_slots(count=len(remaining), top=hero[3] + 12, bottom=XHS_HEIGHT - 28)
         for (_, image), slot in zip(remaining, slots):
-            self._paste_covered(canvas, image, slot)
+            self._paste_contained(canvas, image, slot)
         return canvas
 
     def _create_background(self, background_path: Path | None) -> Image.Image:
@@ -214,16 +214,21 @@ class DocumentExporter:
             return []
         gap = 12
         if count == 1:
-            return [(28, top, XHS_WIDTH - 28, bottom)]
+            height = min(bottom - top, int((XHS_WIDTH - 56) / (16 / 9)))
+            return [(28, bottom - height, XHS_WIDTH - 28, bottom)]
         if count == 2:
             mid = XHS_WIDTH // 2
-            return [(28, top, mid - gap // 2, bottom), (mid + gap // 2, top, XHS_WIDTH - 28, bottom)]
+            height = min(bottom - top, int((mid - gap // 2 - 28) / (16 / 9)))
+            row_top = bottom - height
+            return [(28, row_top, mid - gap // 2, bottom), (mid + gap // 2, row_top, XHS_WIDTH - 28, bottom)]
         if count == 3:
-            wide_height = max(1, (bottom - top - gap) // 2)
-            lower_top = top + wide_height + gap
             mid = XHS_WIDTH // 2
+            lower_height = min((bottom - top - gap) // 2, int((mid - gap // 2 - 28) / (16 / 9)))
+            wide_height = min(bottom - top - gap - lower_height, int((XHS_WIDTH - 56) / (16 / 9)))
+            lower_top = bottom - lower_height
+            wide_top = lower_top - gap - wide_height
             return [
-                (28, top, XHS_WIDTH - 28, top + wide_height),
+                (28, wide_top, XHS_WIDTH - 28, wide_top + wide_height),
                 (28, lower_top, mid - gap // 2, bottom),
                 (mid + gap // 2, lower_top, XHS_WIDTH - 28, bottom),
             ]
@@ -237,7 +242,8 @@ class DocumentExporter:
         left = 28
         right = XHS_WIDTH - 28
         width = (right - left - gap * (columns - 1)) // columns
-        height = (bottom - top - gap * (rows - 1)) // rows
+        height = min((bottom - top - gap * (rows - 1)) // rows, int(width / (16 / 9)))
+        top = max(top, bottom - rows * height - gap * (rows - 1))
         slots = []
         for index in range(remaining_count):
             row = index // columns

@@ -140,6 +140,10 @@ h2 {
   margin: 14px 0;
 }
 
+.export-actions {
+  margin-top: 14px;
+}
+
 button,
 select,
 input {
