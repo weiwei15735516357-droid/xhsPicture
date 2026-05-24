@@ -44,3 +44,4 @@ class ExportDocumentRequest(BaseModel):
     subfolder_output: bool = True
     summary_group_size: int | None = Field(default=5, ge=5, le=9)
     background_path: str | None = None
+    background_has_text: bool = False

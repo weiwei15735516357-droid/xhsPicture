@@ -76,6 +76,10 @@ function renderAssets(assets) {
   }
 }
 
+function syncSummaryControls() {
+  document.getElementById('summary-group-size').disabled = !document.getElementById('summary-enabled').checked;
+}
+
 async function refreshAssets() {
   if (!requireProject()) {
     return;
@@ -123,6 +127,7 @@ async function exportPdf() {
   }
   const pageStart = document.getElementById('page-start').value;
   const pageEnd = document.getElementById('page-end').value;
+  const summaryEnabled = document.getElementById('summary-enabled').checked;
   const summaryGroupSize = document.getElementById('summary-group-size').value;
   const payload = {
     project_dir: state.projectDir,
@@ -131,15 +136,16 @@ async function exportPdf() {
     page_start: pageStart ? Number(pageStart) : null,
     page_end: pageEnd ? Number(pageEnd) : null,
     subfolder_output: document.getElementById('subfolder-output').checked,
-    summary_group_size: summaryGroupSize ? Number(summaryGroupSize) : null,
-    background_path: state.backgroundPath || null
+    summary_group_size: summaryEnabled ? Number(summaryGroupSize) : null,
+    background_path: state.backgroundPath || null,
+    background_has_text: document.getElementById('background-has-text').checked
   };
   const data = await api('/api/documents/export', {
     method: 'POST',
     body: JSON.stringify(payload)
   });
   setText('task-summary', `最近任务：${data.task.status}`);
-  const mode = summaryGroupSize ? `${summaryGroupSize} 张合并` : '逐页导出';
+  const mode = summaryEnabled ? `${summaryGroupSize} 张叠图` : '不叠图，逐页导出';
   setText('document-summary', `已导出 ${data.assets.length} 张 PNG（${mode}）。`);
   appendLog(`文档转 PNG 完成，生成 ${data.assets.length} 张（${mode}）。`);
   await refreshAssets();
@@ -176,9 +182,11 @@ document.getElementById('background-image-btn').addEventListener('click', async 
     appendLog(`已选择底图：${selected}`);
   });
 });
+document.getElementById('summary-enabled').addEventListener('change', syncSummaryControls);
 document.getElementById('export-document-btn').addEventListener('click', () => runAction(exportPdf));
 
 renderProject();
+syncSummaryControls();
 refreshBackendStatus();
 setInterval(refreshBackendStatus, 5000);
 if (state.projectDir) {

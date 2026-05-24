@@ -156,6 +156,30 @@ def test_summary_slots_crop_to_fill_without_white_card_padding():
 
     image = exporter._compose_summary([(1, red), (2, blue), (3, green)]).convert("RGB")
 
-    assert image.getpixel((36, 36)) == (180, 20, 20)
+    assert image.getpixel((540, 36)) == (180, 20, 20)
     assert image.getpixel((36, 610)) == (20, 40, 180)
     assert image.getpixel((560, 610)) == (20, 140, 70)
+
+
+def test_summary_reserves_top_space_when_background_has_text():
+    exporter = DocumentExporter()
+    background = Image.new("RGB", (1080, 1440), (10, 20, 30))
+    slide = Image.new("RGB", (1600, 900), (180, 20, 20))
+
+    image = exporter._compose_summary([(1, slide)], background=background, background_has_text=True).convert("RGB")
+
+    assert image.getpixel((540, 120)) == (10, 20, 30)
+    assert image.getpixel((540, 260)) == (180, 20, 20)
+
+
+def test_summary_thumbnails_preserve_full_slide_edges():
+    exporter = DocumentExporter()
+    hero = Image.new("RGB", (1600, 900), (180, 20, 20))
+    thumbnail = Image.new("RGB", (1600, 900), (20, 40, 180))
+    for x in range(0, 120):
+        for y in range(900):
+            thumbnail.putpixel((x, y), (250, 210, 40))
+
+    image = exporter._compose_summary([(1, hero), (2, thumbnail)]).convert("RGB")
+
+    assert image.getpixel((32, 600)) == (250, 210, 40)

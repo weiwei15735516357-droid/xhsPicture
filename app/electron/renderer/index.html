@@ -66,7 +66,6 @@
               <option value="5" selected>5 张合并</option>
               <option value="7">7 张合并</option>
               <option value="9">9 张合并</option>
-              <option value="">不合并，逐页导出</option>
             </select>
           </div>
           <div class="field-row">
@@ -74,6 +73,14 @@
             <button id="background-image-btn">选择底图</button>
           </div>
           <p id="background-summary" class="muted">未选择底图时使用浅灰背景。</p>
+          <label class="checkbox-row">
+            <input id="summary-enabled" type="checkbox" checked />
+            叠图：PPT/PDF 按 5/7/9 页合成首图
+          </label>
+          <label class="checkbox-row">
+            <input id="background-has-text" type="checkbox" />
+            底图上方有字，上方留 1/6 空间
+          </label>
           <div class="field-row">
             <label for="page-start">起始页</label>
             <input id="page-start" type="number" min="1" placeholder="1" />
