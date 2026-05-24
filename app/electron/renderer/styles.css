@@ -170,9 +170,13 @@ input {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(280px, 1fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(520px, 2fr) minmax(260px, 1fr);
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.hidden-panel {
+  display: none;
 }
 
 .panel {
@@ -286,6 +290,11 @@ input {
   color: #1f2933;
   font-weight: 700;
   cursor: move;
+}
+
+.layout-slot.selected {
+  border-color: #174ea6;
+  background: rgba(26, 115, 232, 0.24);
 }
 
 .layout-slot::after {

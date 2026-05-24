@@ -49,7 +49,7 @@ class ExportDocumentRequest(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     subfolder_output: bool = True
-    summary_group_size: int | None = Field(default=5, ge=5, le=9)
+    summary_group_size: int | None = Field(default=5, ge=1, le=30)
     background_path: str | None = None
     custom_layout: list[LayoutSlot] | None = None
     followup_layout: list[LayoutSlot] | None = None

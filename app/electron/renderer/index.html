@@ -40,7 +40,7 @@
       </section>
 
       <section class="tool-grid">
-        <article class="panel">
+        <article class="panel hidden-panel">
           <h2>导入图片</h2>
           <div class="button-column">
             <button id="import-files-btn">选择图片文件</button>
@@ -61,21 +61,16 @@
             </select>
           </div>
           <div class="field-row">
-            <label for="summary-group-size">合并</label>
-            <select id="summary-group-size">
-              <option value="5" selected>5 张合并</option>
-              <option value="7">7 张合并</option>
-              <option value="9">9 张合并</option>
-            </select>
-          </div>
-          <div class="field-row">
             <label>底图</label>
-            <button id="background-image-btn">选择底图</button>
+            <div class="button-row">
+              <button id="background-image-btn">选择底图</button>
+              <button id="clear-background-btn">删除底图</button>
+            </div>
           </div>
           <p id="background-summary" class="muted">未选择底图时使用浅灰背景。</p>
           <label class="checkbox-row">
             <input id="summary-enabled" type="checkbox" checked />
-            叠图：PPT/PDF 按 5/7/9 页合成首图
+            叠图：按排版坑位数量合成
           </label>
           <div class="field-row">
             <label for="page-start">起始页</label>
@@ -93,15 +88,22 @@
             <button id="select-document-btn">选择 PPT/Word/PDF</button>
             <button id="start-export-btn">开始执行</button>
           </div>
-          <p id="document-summary" class="muted">默认 5 张合并，输出到“文档同名文件夹”。</p>
+          <p id="document-summary" class="muted">勾选叠图后按排版坑位数量合成；不叠图则逐页导出。</p>
+          <input id="layout-import-file" type="file" accept="application/json,.json" hidden />
           <details class="layout-tool">
             <summary>排版工具</summary>
+            <div class="button-row layout-buttons">
+              <button id="layout-export-config-btn">导出配置</button>
+              <button id="layout-import-config-btn">导入配置</button>
+            </div>
             <div class="layout-columns">
               <div>
                 <strong>首图排版</strong>
                 <div class="button-row layout-buttons">
                   <button id="layout-reset-btn">重置首图</button>
                   <button id="layout-save-btn">保存首图</button>
+                  <button id="layout-copy-btn">复制坑位</button>
+                  <button id="layout-delete-btn">删除坑位</button>
                 </div>
                 <div id="layout-canvas" class="layout-canvas"></div>
               </div>
@@ -110,11 +112,13 @@
                 <div class="button-row layout-buttons">
                   <button id="followup-layout-reset-btn">重置后续页</button>
                   <button id="followup-layout-save-btn">保存后续页</button>
+                  <button id="followup-layout-copy-btn">复制坑位</button>
+                  <button id="followup-layout-delete-btn">删除坑位</button>
                 </div>
                 <div id="followup-layout-canvas" class="layout-canvas"></div>
               </div>
             </div>
-            <p id="layout-summary" class="muted">拖动坑位移动，右下角拖动可调整大小。</p>
+            <p id="layout-summary" class="muted">当前 5 个坑位。点击坑位后可复制/删除；拖动坑位移动，右下角拖动调整大小。</p>
           </details>
         </article>
 

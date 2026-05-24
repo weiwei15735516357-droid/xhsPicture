@@ -4,5 +4,6 @@ __pycache__/
 node_modules/
 data/config.json
 data/logs/
+data/office_tmp/
 data/projects/
 .DS_Store

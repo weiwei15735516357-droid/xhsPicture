@@ -4,7 +4,9 @@ const state = {
   backgroundPath: localStorage.getItem('xhs.backgroundPath') || null,
   documentPath: null,
   layout: [],
-  followupLayout: []
+  followupLayout: [],
+  selectedLayoutType: 'first',
+  selectedLayoutIndex: 0
 };
 
 function setText(id, text) {
@@ -80,8 +82,11 @@ function renderAssets(assets) {
 }
 
 function syncSummaryControls() {
-  document.getElementById('summary-group-size').disabled = !document.getElementById('summary-enabled').checked;
-  renderLayoutTool();
+  const enabled = document.getElementById('summary-enabled').checked;
+  document.querySelector('.layout-tool').style.display = enabled ? 'block' : 'none';
+  if (enabled) {
+    renderLayoutTool(state.layout.length === 0);
+  }
 }
 
 function defaultLayout(count) {
@@ -114,23 +119,57 @@ function defaultLayout(count) {
       { x: 0.52, y: 0.72, width: 0.28, height: 0.14 }
     ]
   };
-  return layouts[count].map((slot) => ({ ...slot }));
+  const layout = layouts[count] || layouts[5];
+  return layout.map((slot) => ({ ...slot }));
 }
 
 function getLayoutKey() {
-  return `xhs.layout.first.${document.getElementById('summary-group-size').value}`;
+  return 'xhs.layout.first.custom';
 }
 
 function getFollowupLayoutKey() {
-  return `xhs.layout.followup.${document.getElementById('summary-group-size').value}`;
+  return 'xhs.layout.followup.custom';
 }
 
 function loadLayout() {
-  const count = Number(document.getElementById('summary-group-size').value);
-  const saved = localStorage.getItem(getLayoutKey());
-  const followupSaved = localStorage.getItem(getFollowupLayoutKey());
-  state.layout = saved ? JSON.parse(saved) : defaultLayout(count);
-  state.followupLayout = followupSaved ? JSON.parse(followupSaved) : defaultLayout(count);
+  const saved = parseSavedLayout(localStorage.getItem(getLayoutKey()));
+  const followupSaved = parseSavedLayout(localStorage.getItem(getFollowupLayoutKey()));
+  state.layout = saved && saved.length > 0 ? saved : defaultLayout(5);
+  state.followupLayout = followupSaved && followupSaved.length > 0 ? followupSaved : state.layout.map((slot) => ({ ...slot }));
+  syncLayoutCounts();
+}
+
+function parseSavedLayout(value) {
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return normalizeLayout(parsed);
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizeLayout(layout) {
+  if (!Array.isArray(layout)) {
+    return null;
+  }
+  const normalized = [];
+  for (const slot of layout) {
+    if (!slot || ['x', 'y', 'width', 'height'].some((key) => Number.isNaN(Number(slot[key])))) {
+      return null;
+    }
+    const width = Math.max(0.04, Math.min(1, Number(slot.width)));
+    const height = Math.max(0.04, Math.min(1, Number(slot.height)));
+    normalized.push({
+      x: Math.max(0, Math.min(1 - width, Number(slot.x))),
+      y: Math.max(0, Math.min(1 - height, Number(slot.y))),
+      width,
+      height
+    });
+  }
+  return normalized;
 }
 
 function saveLayout() {
@@ -143,13 +182,99 @@ function saveFollowupLayout() {
   setText('layout-summary', '后续页排版已保存。');
 }
 
-function renderLayoutTool() {
+function syncLayoutCounts() {
+  while (state.followupLayout.length < state.layout.length) {
+    state.followupLayout.push({ ...state.layout[state.followupLayout.length] });
+  }
+  while (state.followupLayout.length > state.layout.length) {
+    state.followupLayout.pop();
+  }
+  state.selectedLayoutIndex = Math.max(0, Math.min(state.selectedLayoutIndex, state.layout.length - 1));
+}
+
+function cloneSlot(slot) {
+  return {
+    x: Math.min(0.92, slot.x + 0.03),
+    y: Math.min(0.92, slot.y + 0.03),
+    width: slot.width,
+    height: slot.height
+  };
+}
+
+function copySelectedSlot() {
+  const index = Math.max(0, state.selectedLayoutIndex);
+  state.layout.splice(index + 1, 0, cloneSlot(state.layout[index]));
+  state.followupLayout.splice(index + 1, 0, cloneSlot(state.followupLayout[index] || state.layout[index]));
+  state.selectedLayoutIndex = index + 1;
+  syncLayoutCounts();
+  localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
+  localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
+  renderLayoutTool();
+  setText('layout-summary', `已复制第 ${index + 1} 个坑位，现在共 ${state.layout.length} 个坑位。`);
+}
+
+function deleteSelectedSlot() {
+  if (state.layout.length <= 1) {
+    setText('layout-summary', '至少保留 1 个坑位。');
+    return;
+  }
+  const index = Math.max(0, state.selectedLayoutIndex);
+  state.layout.splice(index, 1);
+  state.followupLayout.splice(index, 1);
+  state.selectedLayoutIndex = Math.max(0, index - 1);
+  syncLayoutCounts();
+  localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
+  localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
+  renderLayoutTool();
+  setText('layout-summary', `已删除第 ${index + 1} 个坑位，现在共 ${state.layout.length} 个坑位。`);
+}
+
+function exportLayoutConfig() {
+  const config = {
+    version: 1,
+    slot_count: state.layout.length,
+    first_layout: state.layout,
+    followup_layout: state.followupLayout
+  };
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `小红书叠图排版_${state.layout.length}坑位.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+async function importLayoutConfig(file) {
+  const text = await file.text();
+  const config = JSON.parse(text);
+  const firstLayout = normalizeLayout(config.first_layout);
+  const followupLayout = normalizeLayout(config.followup_layout);
+  if (!firstLayout || !followupLayout || firstLayout.length === 0) {
+    throw new Error('排版配置格式不正确');
+  }
+  state.layout = firstLayout;
+  state.followupLayout = followupLayout;
+  syncLayoutCounts();
+  localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
+  localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
+  renderLayoutTool();
+  setText('layout-summary', `已导入 ${state.layout.length} 个坑位排版。`);
+}
+
+function updateLayoutSummary() {
+  setText('layout-summary', `当前 ${state.layout.length} 个坑位。点击坑位后可复制/删除；拖动坑位移动，右下角拖动调整大小。`);
+}
+
+function renderLayoutTool(reload = false) {
   if (!document.getElementById('layout-canvas')) {
     return;
   }
-  loadLayout();
+  if (reload || state.layout.length === 0) {
+    loadLayout();
+  }
   renderLayoutCanvas('layout-canvas', state.layout, 'first');
   renderLayoutCanvas('followup-layout-canvas', state.followupLayout, 'followup');
+  updateLayoutSummary();
 }
 
 function renderLayoutCanvas(canvasId, layout, type) {
@@ -158,6 +283,9 @@ function renderLayoutCanvas(canvasId, layout, type) {
   layout.forEach((slot, index) => {
     const item = document.createElement('div');
     item.className = 'layout-slot';
+    if (state.selectedLayoutType === type && state.selectedLayoutIndex === index) {
+      item.classList.add('selected');
+    }
     item.textContent = index + 1;
     item.style.left = `${slot.x * 100}%`;
     item.style.top = `${slot.y * 100}%`;
@@ -170,6 +298,10 @@ function renderLayoutCanvas(canvasId, layout, type) {
 
 function startLayoutDrag(event, index, type) {
   event.preventDefault();
+  state.selectedLayoutType = type;
+  state.selectedLayoutIndex = index;
+  document.querySelectorAll('.layout-slot').forEach((slot) => slot.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
   const layout = type === 'followup' ? state.followupLayout : state.layout;
   const canvas = event.currentTarget.closest('.layout-canvas');
   const rect = canvas.getBoundingClientRect();
@@ -273,7 +405,7 @@ async function exportPdf() {
   const pageStart = document.getElementById('page-start').value;
   const pageEnd = document.getElementById('page-end').value;
   const summaryEnabled = document.getElementById('summary-enabled').checked;
-  const summaryGroupSize = document.getElementById('summary-group-size').value;
+  const summaryGroupSize = state.layout.length;
   const payload = {
     project_dir: state.projectDir,
     file_path: state.documentPath,
@@ -330,18 +462,45 @@ document.getElementById('background-image-btn').addEventListener('click', async 
     appendLog(`已选择底图：${selected}`);
   });
 });
+document.getElementById('clear-background-btn').addEventListener('click', () => {
+  state.backgroundPath = null;
+  localStorage.removeItem('xhs.backgroundPath');
+  renderProject();
+  appendLog('已删除底图，导出时使用浅灰背景。');
+});
 document.getElementById('summary-enabled').addEventListener('change', syncSummaryControls);
-document.getElementById('summary-group-size').addEventListener('change', renderLayoutTool);
 document.getElementById('layout-reset-btn').addEventListener('click', () => {
   localStorage.removeItem(getLayoutKey());
+  state.layout = defaultLayout(5);
+  syncLayoutCounts();
   renderLayoutTool();
+  setText('layout-summary', '首图排版已重置为 5 个坑位。');
 });
 document.getElementById('layout-save-btn').addEventListener('click', saveLayout);
+document.getElementById('layout-copy-btn').addEventListener('click', copySelectedSlot);
+document.getElementById('layout-delete-btn').addEventListener('click', deleteSelectedSlot);
 document.getElementById('followup-layout-reset-btn').addEventListener('click', () => {
   localStorage.removeItem(getFollowupLayoutKey());
+  state.followupLayout = state.layout.map((slot) => ({ ...slot }));
+  syncLayoutCounts();
   renderLayoutTool();
+  setText('layout-summary', '后续页排版已重置为首图同款坑位。');
 });
 document.getElementById('followup-layout-save-btn').addEventListener('click', saveFollowupLayout);
+document.getElementById('followup-layout-copy-btn').addEventListener('click', copySelectedSlot);
+document.getElementById('followup-layout-delete-btn').addEventListener('click', deleteSelectedSlot);
+document.getElementById('layout-export-config-btn').addEventListener('click', exportLayoutConfig);
+document.getElementById('layout-import-config-btn').addEventListener('click', () => {
+  document.getElementById('layout-import-file').click();
+});
+document.getElementById('layout-import-file').addEventListener('change', async (event) => {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+  await runAction(async () => importLayoutConfig(file));
+  event.target.value = '';
+});
 document.getElementById('select-document-btn').addEventListener('click', () => runAction(async () => {
   const selected = await window.xhsApp.selectDocumentFile();
   if (!selected) {
