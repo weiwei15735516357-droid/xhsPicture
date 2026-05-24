@@ -143,6 +143,16 @@ def test_summary_uses_custom_layout_slots():
     assert image.getpixel((120, 1000)) == (20, 40, 180)
 
 
+def test_custom_layout_slots_fill_the_exact_slot_without_internal_background():
+    exporter = DocumentExporter()
+    red = Image.new("RGB", (1600, 900), (180, 20, 20))
+    layout = [{"x": 0.0, "y": 0.0, "width": 1.0, "height": 0.5}]
+
+    image = exporter._compose_summary([(1, red)], custom_layout=layout).convert("RGB")
+
+    assert image.getpixel((540, 700)) == (180, 20, 20)
+
+
 def test_followup_summary_groups_use_followup_layout(tmp_path: Path):
     project_dir = tmp_path / "ProjectA"
     ProjectService().create_project(project_dir)

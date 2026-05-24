@@ -227,7 +227,7 @@ class DocumentExporter:
         canvas = background.copy() if background else self._create_background(background_path)
         if custom_layout:
             for (_, image), slot in zip(group, self._custom_slots(custom_layout)):
-                self._paste_contained(canvas, image, slot)
+                self._paste_covered(canvas, image, slot)
             return canvas
         top = 18
         hero = (4, top, XHS_WIDTH - 4, 621)
