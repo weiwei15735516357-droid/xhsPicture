@@ -3,7 +3,7 @@ from typing import Any
 from io import BytesIO
 
 import fitz
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from backend.services.asset_registry import AssetRegistry
 from backend.services.office_converter import POWERPOINT_EXTENSIONS, WORD_EXTENSIONS, OfficeConverter
@@ -12,7 +12,6 @@ from backend.services.office_converter import POWERPOINT_EXTENSIONS, WORD_EXTENS
 XHS_WIDTH = 1080
 XHS_HEIGHT = 1440
 PAGE_BACKGROUND = (248, 250, 252)
-CARD_BACKGROUND = (255, 255, 255)
 
 
 class DocumentExporter:
@@ -142,15 +141,12 @@ class DocumentExporter:
 
     def _compose_summary(self, group: list[tuple[int, Image.Image]], background_path: Path | None = None) -> Image.Image:
         canvas = self._create_background(background_path)
-        draw = ImageDraw.Draw(canvas)
-        hero = (48, 48, XHS_WIDTH - 48, 560)
-        self._draw_card(draw, hero)
-        self._paste_contained(canvas, group[0][1], self._inset(hero, 12))
+        hero = (28, 28, XHS_WIDTH - 28, 570)
+        self._paste_covered(canvas, group[0][1], hero)
         remaining = group[1:]
-        slots = self._dynamic_slots(count=len(remaining), top=600, bottom=XHS_HEIGHT - 54)
+        slots = self._dynamic_slots(count=len(remaining), top=594, bottom=XHS_HEIGHT - 28)
         for (_, image), slot in zip(remaining, slots):
-            self._draw_card(draw, slot)
-            self._paste_contained(canvas, image, self._inset(slot, 10))
+            self._paste_covered(canvas, image, slot)
         return canvas
 
     def _create_background(self, background_path: Path | None) -> Image.Image:
@@ -177,26 +173,28 @@ class DocumentExporter:
         if count <= 0:
             return []
         if count == 1:
-            return [(70, top, XHS_WIDTH - 70, bottom)]
+            return [(28, top, XHS_WIDTH - 28, bottom)]
         if count == 2:
-            mid = (top + bottom - 18) // 2
-            return [(70, top, XHS_WIDTH - 70, mid), (70, mid + 18, XHS_WIDTH - 70, bottom)]
+            gap = 12
+            mid = XHS_WIDTH // 2
+            return [(28, top, mid - gap // 2, bottom), (mid + gap // 2, top, XHS_WIDTH - 28, bottom)]
         if count == 3:
-            mid_y = top + int((bottom - top - 18) * 0.52)
+            gap = 12
+            mid_y = top + int((bottom - top - gap) * 0.5)
             return [
-                (54, top, XHS_WIDTH - 54, mid_y),
-                (54, mid_y + 18, XHS_WIDTH // 2 - 9, bottom),
-                (XHS_WIDTH // 2 + 9, mid_y + 18, XHS_WIDTH - 54, bottom),
+                (28, top, XHS_WIDTH - 28, mid_y),
+                (28, mid_y + gap, XHS_WIDTH // 2 - gap // 2, bottom),
+                (XHS_WIDTH // 2 + gap // 2, mid_y + gap, XHS_WIDTH - 28, bottom),
             ]
         return self._grid_slots(remaining_count=count, top=top, bottom=bottom, columns=2 if count <= 6 else 3)
 
     def _grid_slots(self, remaining_count: int, top: int, bottom: int, columns: int) -> list[tuple[int, int, int, int]]:
         if remaining_count <= 0:
             return []
-        gap = 18
+        gap = 12
         rows = (remaining_count + columns - 1) // columns
-        left = 48
-        right = XHS_WIDTH - 48
+        left = 28
+        right = XHS_WIDTH - 28
         width = (right - left - gap * (columns - 1)) // columns
         height = (bottom - top - gap * (rows - 1)) // rows
         slots = []
@@ -207,9 +205,6 @@ class DocumentExporter:
             y1 = top + row * (height + gap)
             slots.append((x1, y1, x1 + width, y1 + height))
         return slots
-
-    def _draw_card(self, draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
-        draw.rounded_rectangle(box, radius=16, fill=CARD_BACKGROUND, outline=(210, 218, 228), width=2)
 
     def _inset(self, box: tuple[int, int, int, int], value: int) -> tuple[int, int, int, int]:
         return (box[0] + value, box[1] + value, box[2] - value, box[3] - value)
@@ -222,3 +217,20 @@ class DocumentExporter:
         x = box[0] + (max_width - image_copy.width) // 2
         y = box[1] + (max_height - image_copy.height) // 2
         canvas.paste(image_copy, (x, y))
+
+    def _paste_covered(self, canvas: Image.Image, image: Image.Image, box: tuple[int, int, int, int]) -> None:
+        target_width = box[2] - box[0]
+        target_height = box[3] - box[1]
+        image_ratio = image.width / image.height
+        target_ratio = target_width / target_height
+        if image_ratio > target_ratio:
+            new_height = target_height
+            new_width = int(new_height * image_ratio)
+        else:
+            new_width = target_width
+            new_height = int(new_width / image_ratio)
+        resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        left = (new_width - target_width) // 2
+        top = (new_height - target_height) // 2
+        cropped = resized.crop((left, top, left + target_width, top + target_height))
+        canvas.paste(cropped, (box[0], box[1]))

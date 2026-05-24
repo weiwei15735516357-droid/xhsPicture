@@ -5,6 +5,7 @@ from PIL import Image
 from fastapi.testclient import TestClient
 
 from backend.server import create_app
+from backend.services.document_exporter import DocumentExporter
 from backend.services.project_service import ProjectService
 
 
@@ -145,3 +146,16 @@ def test_later_summary_groups_use_hero_layout_and_fill_canvas(tmp_path: Path):
     image = Image.open(second_output).convert("RGB")
     assert image.size == (1080, 1440)
     assert image.getpixel((540, 80)) != (248, 250, 252)
+
+
+def test_summary_slots_crop_to_fill_without_white_card_padding():
+    exporter = DocumentExporter()
+    red = Image.new("RGB", (1600, 900), (180, 20, 20))
+    blue = Image.new("RGB", (1600, 900), (20, 40, 180))
+    green = Image.new("RGB", (1600, 900), (20, 140, 70))
+
+    image = exporter._compose_summary([(1, red), (2, blue), (3, green)]).convert("RGB")
+
+    assert image.getpixel((36, 36)) == (180, 20, 20)
+    assert image.getpixel((36, 610)) == (20, 40, 180)
+    assert image.getpixel((560, 610)) == (20, 140, 70)
