@@ -6,7 +6,8 @@ const state = {
   layout: [],
   followupLayout: [],
   selectedLayoutType: 'first',
-  selectedLayoutIndex: 0
+  selectedLayoutIndex: 0,
+  exportInProgress: false
 };
 
 function setText(id, text) {
@@ -136,7 +137,7 @@ function loadLayout() {
   const followupSaved = parseSavedLayout(localStorage.getItem(getFollowupLayoutKey()));
   state.layout = saved && saved.length > 0 ? saved : defaultLayout(5);
   state.followupLayout = followupSaved && followupSaved.length > 0 ? followupSaved : state.layout.map((slot) => ({ ...slot }));
-  syncLayoutCounts();
+  syncLayoutSelection();
 }
 
 function parseSavedLayout(value) {
@@ -182,14 +183,9 @@ function saveFollowupLayout() {
   setText('layout-summary', '后续页排版已保存。');
 }
 
-function syncLayoutCounts() {
-  while (state.followupLayout.length < state.layout.length) {
-    state.followupLayout.push({ ...state.layout[state.followupLayout.length] });
-  }
-  while (state.followupLayout.length > state.layout.length) {
-    state.followupLayout.pop();
-  }
-  state.selectedLayoutIndex = Math.max(0, Math.min(state.selectedLayoutIndex, state.layout.length - 1));
+function syncLayoutSelection() {
+  const layout = state.selectedLayoutType === 'followup' ? state.followupLayout : state.layout;
+  state.selectedLayoutIndex = Math.max(0, Math.min(state.selectedLayoutIndex, layout.length - 1));
 }
 
 function cloneSlot(slot) {
@@ -201,32 +197,30 @@ function cloneSlot(slot) {
   };
 }
 
-function copySelectedSlot() {
-  const index = Math.max(0, state.selectedLayoutIndex);
-  state.layout.splice(index + 1, 0, cloneSlot(state.layout[index]));
-  state.followupLayout.splice(index + 1, 0, cloneSlot(state.followupLayout[index] || state.layout[index]));
+function copySelectedSlot(type) {
+  const layout = type === 'followup' ? state.followupLayout : state.layout;
+  const index = Math.max(0, Math.min(state.selectedLayoutIndex, layout.length - 1));
+  layout.splice(index + 1, 0, cloneSlot(layout[index]));
+  state.selectedLayoutType = type;
   state.selectedLayoutIndex = index + 1;
-  syncLayoutCounts();
-  localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
-  localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
+  localStorage.setItem(type === 'followup' ? getFollowupLayoutKey() : getLayoutKey(), JSON.stringify(layout));
   renderLayoutTool();
-  setText('layout-summary', `已复制第 ${index + 1} 个坑位，现在共 ${state.layout.length} 个坑位。`);
+  setText('layout-summary', `已复制${type === 'followup' ? '后续页' : '首图'}第 ${index + 1} 个坑位，现在共 ${layout.length} 个坑位。`);
 }
 
-function deleteSelectedSlot() {
-  if (state.layout.length <= 1) {
+function deleteSelectedSlot(type) {
+  const layout = type === 'followup' ? state.followupLayout : state.layout;
+  if (layout.length <= 1) {
     setText('layout-summary', '至少保留 1 个坑位。');
     return;
   }
-  const index = Math.max(0, state.selectedLayoutIndex);
-  state.layout.splice(index, 1);
-  state.followupLayout.splice(index, 1);
+  const index = Math.max(0, Math.min(state.selectedLayoutIndex, layout.length - 1));
+  layout.splice(index, 1);
+  state.selectedLayoutType = type;
   state.selectedLayoutIndex = Math.max(0, index - 1);
-  syncLayoutCounts();
-  localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
-  localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
+  localStorage.setItem(type === 'followup' ? getFollowupLayoutKey() : getLayoutKey(), JSON.stringify(layout));
   renderLayoutTool();
-  setText('layout-summary', `已删除第 ${index + 1} 个坑位，现在共 ${state.layout.length} 个坑位。`);
+  setText('layout-summary', `已删除${type === 'followup' ? '后续页' : '首图'}第 ${index + 1} 个坑位，现在共 ${layout.length} 个坑位。`);
 }
 
 function exportLayoutConfig() {
@@ -254,7 +248,7 @@ async function importLayoutConfig(file) {
   }
   state.layout = firstLayout;
   state.followupLayout = followupLayout;
-  syncLayoutCounts();
+  syncLayoutSelection();
   localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
   localStorage.setItem(getFollowupLayoutKey(), JSON.stringify(state.followupLayout));
   renderLayoutTool();
@@ -262,7 +256,7 @@ async function importLayoutConfig(file) {
 }
 
 function updateLayoutSummary() {
-  setText('layout-summary', `当前 ${state.layout.length} 个坑位。点击坑位后可复制/删除；拖动坑位移动，右下角拖动调整大小。`);
+  setText('layout-summary', `首图 ${state.layout.length} 个坑位，后续页 ${state.followupLayout.length} 个坑位。点击对应排版区坑位后，可复制/删除当前排版区。`);
 }
 
 function renderLayoutTool(reload = false) {
@@ -425,7 +419,7 @@ async function exportPdf() {
   });
   const task = await waitForTask(started.task.id);
   const assets = task.result.assets;
-  const mode = summaryEnabled ? `${summaryGroupSize} 张叠图` : '不叠图，逐页导出';
+  const mode = summaryEnabled ? `首图 ${summaryGroupSize} 张/后续 ${state.followupLayout.length} 张叠图` : '不叠图，逐页导出';
   setText('document-summary', `已导出 ${assets.length} 张 PNG（${mode}）。`);
   appendLog(`文档转 PNG 完成，生成 ${assets.length} 张（${mode}）。`);
   await refreshAssets();
@@ -436,6 +430,26 @@ async function runAction(action) {
     await action();
   } catch (error) {
     appendLog(`错误：${error.message}`);
+  }
+}
+
+async function runExportAction() {
+  if (state.exportInProgress) {
+    appendLog('导出正在执行，请等待完成后再开始下一次。');
+    return;
+  }
+  const button = document.getElementById('start-export-btn');
+  state.exportInProgress = true;
+  button.disabled = true;
+  button.textContent = '执行中...';
+  try {
+    await exportPdf();
+  } catch (error) {
+    appendLog(`错误：${error.message}`);
+  } finally {
+    state.exportInProgress = false;
+    button.disabled = false;
+    button.textContent = '开始执行';
   }
 }
 
@@ -472,23 +486,25 @@ document.getElementById('summary-enabled').addEventListener('change', syncSummar
 document.getElementById('layout-reset-btn').addEventListener('click', () => {
   localStorage.removeItem(getLayoutKey());
   state.layout = defaultLayout(5);
-  syncLayoutCounts();
+  state.selectedLayoutType = 'first';
+  syncLayoutSelection();
   renderLayoutTool();
   setText('layout-summary', '首图排版已重置为 5 个坑位。');
 });
 document.getElementById('layout-save-btn').addEventListener('click', saveLayout);
-document.getElementById('layout-copy-btn').addEventListener('click', copySelectedSlot);
-document.getElementById('layout-delete-btn').addEventListener('click', deleteSelectedSlot);
+document.getElementById('layout-copy-btn').addEventListener('click', () => copySelectedSlot('first'));
+document.getElementById('layout-delete-btn').addEventListener('click', () => deleteSelectedSlot('first'));
 document.getElementById('followup-layout-reset-btn').addEventListener('click', () => {
   localStorage.removeItem(getFollowupLayoutKey());
   state.followupLayout = state.layout.map((slot) => ({ ...slot }));
-  syncLayoutCounts();
+  state.selectedLayoutType = 'followup';
+  syncLayoutSelection();
   renderLayoutTool();
   setText('layout-summary', '后续页排版已重置为首图同款坑位。');
 });
 document.getElementById('followup-layout-save-btn').addEventListener('click', saveFollowupLayout);
-document.getElementById('followup-layout-copy-btn').addEventListener('click', copySelectedSlot);
-document.getElementById('followup-layout-delete-btn').addEventListener('click', deleteSelectedSlot);
+document.getElementById('followup-layout-copy-btn').addEventListener('click', () => copySelectedSlot('followup'));
+document.getElementById('followup-layout-delete-btn').addEventListener('click', () => deleteSelectedSlot('followup'));
 document.getElementById('layout-export-config-btn').addEventListener('click', exportLayoutConfig);
 document.getElementById('layout-import-config-btn').addEventListener('click', () => {
   document.getElementById('layout-import-file').click();
@@ -512,7 +528,7 @@ document.getElementById('select-document-btn').addEventListener('click', () => r
   setText('document-summary', `已选择：${selected}`);
   appendLog(`已选择文档：${selected}`);
 }));
-document.getElementById('start-export-btn').addEventListener('click', () => runAction(exportPdf));
+document.getElementById('start-export-btn').addEventListener('click', runExportAction);
 
 renderProject();
 syncSummaryControls();

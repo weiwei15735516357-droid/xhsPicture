@@ -95,7 +95,11 @@ class DocumentExporter:
             start = max((page_start or 1), 1)
             end = min((page_end or doc.page_count), doc.page_count)
             selected_pages = max(end - start + 1, 0)
-            output_count = (selected_pages + summary_group_size - 1) // summary_group_size if summary_group_size else selected_pages
+            output_count = (
+                self._summary_output_count(selected_pages, summary_group_size, custom_layout, followup_layout)
+                if summary_group_size
+                else selected_pages
+            )
             total_steps = selected_pages + output_count
             rendered_steps = 0
             matrix = fitz.Matrix(scale, scale)
@@ -158,9 +162,8 @@ class DocumentExporter:
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         assets = []
-        group_starts = list(range(0, len(rendered_pages), group_size))
-        for group_index, start_index in enumerate(group_starts, start=1):
-            group = rendered_pages[start_index : start_index + group_size]
+        groups = self._summary_groups(rendered_pages, group_size, custom_layout, followup_layout)
+        for group_index, group in enumerate(groups, start=1):
             if not group:
                 continue
             first_page = group[0][0]
@@ -171,8 +174,43 @@ class DocumentExporter:
             canvas.save(output_path)
             assets.append(registry.add_asset(output_path, "汇总图", origin))
             if progress_callback:
-                progress_callback(group_index, len(group_starts))
+                progress_callback(group_index, len(groups))
         return assets
+
+    def _summary_output_count(
+        self,
+        selected_pages: int,
+        group_size: int,
+        custom_layout: list[dict[str, float]] | None,
+        followup_layout: list[dict[str, float]] | None,
+    ) -> int:
+        if selected_pages <= 0:
+            return 0
+        first_size = self._layout_group_size(custom_layout, group_size)
+        if selected_pages <= first_size:
+            return 1
+        followup_size = self._layout_group_size(followup_layout, first_size)
+        return 1 + (selected_pages - first_size + followup_size - 1) // followup_size
+
+    def _summary_groups(
+        self,
+        rendered_pages: list[tuple[int, Image.Image]],
+        group_size: int,
+        custom_layout: list[dict[str, float]] | None,
+        followup_layout: list[dict[str, float]] | None,
+    ) -> list[list[tuple[int, Image.Image]]]:
+        groups = []
+        index = 0
+        first_size = self._layout_group_size(custom_layout, group_size)
+        followup_size = self._layout_group_size(followup_layout, first_size)
+        while index < len(rendered_pages):
+            size = first_size if not groups else followup_size
+            groups.append(rendered_pages[index : index + size])
+            index += size
+        return groups
+
+    def _layout_group_size(self, layout: list[dict[str, float]] | None, fallback: int) -> int:
+        return max(1, len(layout) if layout else fallback)
 
     def _compose_portrait_page(self, image: Image.Image) -> Image.Image:
         canvas = Image.new("RGB", (XHS_WIDTH, XHS_HEIGHT), PAGE_BACKGROUND)

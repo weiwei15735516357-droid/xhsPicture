@@ -161,8 +161,8 @@ def test_followup_summary_groups_use_followup_layout(tmp_path: Path):
         group_size=5,
         origin="test",
         background_path=None,
-        custom_layout=[{"x": 0, "y": 0, "width": 1, "height": 0.5}],
-        followup_layout=[{"x": 0, "y": 0.5, "width": 1, "height": 0.5}],
+        custom_layout=[{"x": 0, "y": 0, "width": 1, "height": 0.5}] * 5,
+        followup_layout=[{"x": 0, "y": 0.5, "width": 1, "height": 0.5}] * 5,
     )
 
     first = Image.open(assets[0]["path"]).convert("RGB")
@@ -171,6 +171,40 @@ def test_followup_summary_groups_use_followup_layout(tmp_path: Path):
     assert first.getpixel((540, 1200)) == (248, 250, 252)
     assert second.getpixel((540, 120)) == (248, 250, 252)
     assert second.getpixel((540, 1200)) == (20, 20, 180)
+
+
+def test_custom_first_and_followup_layouts_can_use_different_group_sizes(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    rendered_pages = [(index, Image.new("RGB", (1600, 900), (20, 40, 180))) for index in range(1, 9)]
+
+    output_dir = project_dir / "deck"
+    output_dir.mkdir()
+    assets = DocumentExporter()._save_summary_groups(
+        registry=AssetRegistry(project_dir),
+        output_dir=output_dir,
+        document_name="deck",
+        rendered_pages=rendered_pages,
+        group_size=5,
+        origin="test",
+        background_path=None,
+        custom_layout=[
+            {"x": 0, "y": 0, "width": 1, "height": 0.3},
+            {"x": 0, "y": 0.3, "width": 1, "height": 0.3},
+            {"x": 0, "y": 0.6, "width": 1, "height": 0.3},
+        ],
+        followup_layout=[
+            {"x": 0, "y": 0, "width": 1, "height": 0.5},
+            {"x": 0, "y": 0.5, "width": 1, "height": 0.5},
+        ],
+    )
+
+    assert [Path(asset["path"]).name for asset in assets] == [
+        "deck_汇总_001_001-003.png",
+        "deck_汇总_002_004-005.png",
+        "deck_汇总_003_006-007.png",
+        "deck_汇总_004_008-008.png",
+    ]
 
 
 def test_document_export_root_contains_only_document_output_folder(tmp_path: Path):
