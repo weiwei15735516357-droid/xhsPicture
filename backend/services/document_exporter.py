@@ -29,7 +29,6 @@ class DocumentExporter:
         subfolder_output: bool,
         summary_group_size: int | None = 5,
         background_path: Path | None = None,
-        background_has_text: bool = False,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         suffix = file_path.suffix.lower()
@@ -43,7 +42,6 @@ class DocumentExporter:
                 subfolder_output,
                 summary_group_size=summary_group_size,
                 background_path=background_path,
-                background_has_text=background_has_text,
                 progress_callback=progress_callback,
             )
         if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
@@ -59,7 +57,6 @@ class DocumentExporter:
                 origin_path=file_path,
                 summary_group_size=summary_group_size,
                 background_path=background_path,
-                background_has_text=background_has_text,
                 progress_callback=progress_callback,
             )
         raise ValueError(f"不支持的文档格式：{suffix}")
@@ -76,7 +73,6 @@ class DocumentExporter:
         origin_path: Path | None = None,
         summary_group_size: int | None = None,
         background_path: Path | None = None,
-        background_has_text: bool = False,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         document_name = output_name or file_path.stem
@@ -125,7 +121,6 @@ class DocumentExporter:
                     summary_group_size,
                     origin,
                     background_path,
-                    background_has_text,
                     report_output,
                 )
             )
@@ -148,7 +143,6 @@ class DocumentExporter:
         group_size: int,
         origin: str,
         background_path: Path | None,
-        background_has_text: bool,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         assets = []
@@ -159,7 +153,7 @@ class DocumentExporter:
                 continue
             first_page = group[0][0]
             last_page = group[-1][0]
-            canvas = self._compose_summary(group, background_path=background_path, background_has_text=background_has_text)
+            canvas = self._compose_summary(group, background_path=background_path)
             output_path = output_dir / f"{document_name}_汇总_{group_index:03d}_{first_page:03d}-{last_page:03d}.png"
             canvas.save(output_path)
             assets.append(registry.add_asset(output_path, "汇总图", origin))
@@ -177,11 +171,10 @@ class DocumentExporter:
         group: list[tuple[int, Image.Image]],
         background_path: Path | None = None,
         background: Image.Image | None = None,
-        background_has_text: bool = False,
     ) -> Image.Image:
         canvas = background.copy() if background else self._create_background(background_path)
-        top = XHS_HEIGHT // 6 if background_has_text else 18
-        hero = (28, top, XHS_WIDTH - 28, top + 430) if background_has_text else (4, top, XHS_WIDTH - 4, 621)
+        top = 18
+        hero = (4, top, XHS_WIDTH - 4, 621)
         self._paste_contained(canvas, group[0][1], hero, vertical_align="top")
         remaining = group[1:]
         slots = self._dynamic_slots(count=len(remaining), top=hero[3] + 12, bottom=XHS_HEIGHT - 28)

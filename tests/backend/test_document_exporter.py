@@ -100,6 +100,33 @@ def test_pdf_export_groups_pages_into_summary_images(tmp_path: Path):
     assert all(asset["source_type"] == "汇总图" for asset in assets)
 
 
+def test_pdf_export_groups_all_pages_not_only_first_summary(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    pdf_path = tmp_path / "long-deck.pdf"
+    _create_pdf(pdf_path, pages=22)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/documents/export",
+        json={
+            "project_dir": str(project_dir),
+            "file_path": str(pdf_path),
+            "scale": 1,
+            "summary_group_size": 5,
+        },
+    )
+
+    assets = response.json()["assets"]
+    assert [Path(asset["path"]).name for asset in assets] == [
+        "long-deck_汇总_001_001-005.png",
+        "long-deck_汇总_002_006-010.png",
+        "long-deck_汇总_003_011-015.png",
+        "long-deck_汇总_004_016-020.png",
+        "long-deck_汇总_005_021-022.png",
+    ]
+
+
 def test_document_export_root_contains_only_document_output_folder(tmp_path: Path):
     project_dir = tmp_path / "ProjectA"
     ProjectService().create_project(project_dir)
@@ -180,17 +207,6 @@ def test_summary_slots_crop_to_fill_without_white_card_padding():
     assert image.getpixel((540, 36)) == (180, 20, 20)
     assert image.getpixel((36, 1130)) == (20, 40, 180)
     assert image.getpixel((560, 1130)) == (20, 140, 70)
-
-
-def test_summary_reserves_top_space_when_background_has_text():
-    exporter = DocumentExporter()
-    background = Image.new("RGB", (1080, 1440), (10, 20, 30))
-    slide = Image.new("RGB", (1600, 900), (180, 20, 20))
-
-    image = exporter._compose_summary([(1, slide)], background=background, background_has_text=True).convert("RGB")
-
-    assert image.getpixel((540, 120)) == (10, 20, 30)
-    assert image.getpixel((540, 260)) == (180, 20, 20)
 
 
 def test_summary_thumbnails_preserve_edges_and_reach_bottom():

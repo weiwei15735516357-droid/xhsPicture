@@ -160,8 +160,7 @@ async function exportPdf() {
     page_end: pageEnd ? Number(pageEnd) : null,
     subfolder_output: document.getElementById('subfolder-output').checked,
     summary_group_size: summaryEnabled ? Number(summaryGroupSize) : null,
-    background_path: state.backgroundPath || null,
-    background_has_text: document.getElementById('background-has-text').checked
+    background_path: state.backgroundPath || null
   };
   updateProgress({ percent: 0, message: '准备开始导出' });
   const started = await api('/api/documents/export/start', {
@@ -214,6 +213,8 @@ document.getElementById('select-document-btn').addEventListener('click', () => r
     return;
   }
   state.documentPath = selected;
+  document.getElementById('page-start').value = '';
+  document.getElementById('page-end').value = '';
   setText('document-summary', `已选择：${selected}`);
   appendLog(`已选择文档：${selected}`);
 }));
