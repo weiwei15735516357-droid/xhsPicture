@@ -127,6 +127,21 @@ def test_pdf_export_groups_all_pages_not_only_first_summary(tmp_path: Path):
     ]
 
 
+def test_summary_uses_custom_layout_slots():
+    exporter = DocumentExporter()
+    red = Image.new("RGB", (1600, 900), (180, 20, 20))
+    blue = Image.new("RGB", (1600, 900), (20, 40, 180))
+    layout = [
+        {"x": 0.0, "y": 0.0, "width": 1.0, "height": 0.5},
+        {"x": 0.0, "y": 0.5, "width": 0.5, "height": 0.5},
+    ]
+
+    image = exporter._compose_summary([(1, red), (2, blue)], custom_layout=layout).convert("RGB")
+
+    assert image.getpixel((540, 120)) == (180, 20, 20)
+    assert image.getpixel((120, 1000)) == (20, 40, 180)
+
+
 def test_document_export_root_contains_only_document_output_folder(tmp_path: Path):
     project_dir = tmp_path / "ProjectA"
     ProjectService().create_project(project_dir)

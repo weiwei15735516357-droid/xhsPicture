@@ -32,3 +32,15 @@ def test_asset_registry_lists_assets(tmp_path: Path):
     assets = registry.list_assets()
 
     assert assets == [created]
+
+
+def test_asset_registry_recreates_missing_internal_project_file(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    project_dir.mkdir()
+    image_path = project_dir / "cover.png"
+    image_path.write_bytes(b"fake")
+
+    asset = AssetRegistry(project_dir).add_asset(image_path, "普通图片", "import")
+
+    assert asset["id"]
+    assert AssetRegistry(project_dir).list_assets()[0]["id"] == asset["id"]

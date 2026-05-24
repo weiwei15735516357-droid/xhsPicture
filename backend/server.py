@@ -55,6 +55,7 @@ def create_app() -> FastAPI:
             subfolder_output=request.subfolder_output,
             summary_group_size=request.summary_group_size,
             background_path=Path(request.background_path) if request.background_path else None,
+            custom_layout=[slot.model_dump() for slot in request.custom_layout] if request.custom_layout else None,
         )
         task = task_store.create_completed("document_export", result)
         return {"task": task, "assets": result["assets"]}
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
                     subfolder_output=request.subfolder_output,
                     summary_group_size=request.summary_group_size,
                     background_path=Path(request.background_path) if request.background_path else None,
+                    custom_layout=[slot.model_dump() for slot in request.custom_layout] if request.custom_layout else None,
                     progress_callback=lambda current, total, message: task_store.update_progress(
                         task["id"], current, total, message
                     ),

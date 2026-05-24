@@ -35,6 +35,13 @@ class ImportAssetsRequest(BaseModel):
     paths: list[str]
 
 
+class LayoutSlot(BaseModel):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(gt=0, le=1)
+    height: float = Field(gt=0, le=1)
+
+
 class ExportDocumentRequest(BaseModel):
     project_dir: str
     file_path: str
@@ -44,3 +51,4 @@ class ExportDocumentRequest(BaseModel):
     subfolder_output: bool = True
     summary_group_size: int | None = Field(default=5, ge=5, le=9)
     background_path: str | None = None
+    custom_layout: list[LayoutSlot] | None = None

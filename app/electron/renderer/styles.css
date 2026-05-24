@@ -245,6 +245,52 @@ input {
   transition: width 180ms ease;
 }
 
+.layout-tool {
+  margin-top: 14px;
+}
+
+.layout-tool summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.layout-buttons {
+  margin: 12px 0;
+}
+
+.layout-canvas {
+  position: relative;
+  width: min(100%, 270px);
+  aspect-ratio: 3 / 4;
+  border: 1px solid #cbd2d9;
+  background: #f8fafc;
+  user-select: none;
+}
+
+.layout-slot {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 24px;
+  border: 2px solid #d93025;
+  background: rgba(26, 115, 232, 0.12);
+  color: #1f2933;
+  font-weight: 700;
+  cursor: move;
+}
+
+.layout-slot::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 12px;
+  height: 12px;
+  background: #d93025;
+  cursor: nwse-resize;
+}
+
 .asset-section {
   padding: 16px;
 }

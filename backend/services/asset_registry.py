@@ -35,6 +35,17 @@ class AssetRegistry:
             self.project_file.parent.mkdir(parents=True, exist_ok=True)
             self.project_file.write_text(legacy_project_file.read_text(encoding="utf-8"), encoding="utf-8")
             legacy_project_file.unlink()
+        if not self.project_file.exists():
+            self.project_file.parent.mkdir(parents=True, exist_ok=True)
+            return {
+                "name": self.project_dir.name,
+                "project_dir": str(self.project_dir),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "assets": [],
+                "tasks": [],
+                "templates": [],
+                "exports": [],
+            }
         return json.loads(self.project_file.read_text(encoding="utf-8"))
 
     def _save_project(self, project: dict[str, Any]) -> None:

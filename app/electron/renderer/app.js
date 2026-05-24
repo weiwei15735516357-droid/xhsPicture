@@ -2,7 +2,8 @@ const state = {
   baseUrl: null,
   projectDir: localStorage.getItem('xhs.currentProjectDir') || null,
   backgroundPath: localStorage.getItem('xhs.backgroundPath') || null,
-  documentPath: null
+  documentPath: null,
+  layout: []
 };
 
 function setText(id, text) {
@@ -79,6 +80,99 @@ function renderAssets(assets) {
 
 function syncSummaryControls() {
   document.getElementById('summary-group-size').disabled = !document.getElementById('summary-enabled').checked;
+  renderLayoutTool();
+}
+
+function defaultLayout(count) {
+  const layouts = {
+    5: [
+      { x: 0.04, y: 0.02, width: 0.92, height: 0.38 },
+      { x: 0.04, y: 0.43, width: 0.44, height: 0.18 },
+      { x: 0.52, y: 0.43, width: 0.44, height: 0.18 },
+      { x: 0.04, y: 0.64, width: 0.44, height: 0.18 },
+      { x: 0.52, y: 0.64, width: 0.44, height: 0.18 }
+    ],
+    7: [
+      { x: 0.04, y: 0.02, width: 0.92, height: 0.34 },
+      { x: 0.04, y: 0.39, width: 0.28, height: 0.16 },
+      { x: 0.36, y: 0.39, width: 0.28, height: 0.16 },
+      { x: 0.68, y: 0.39, width: 0.28, height: 0.16 },
+      { x: 0.04, y: 0.59, width: 0.28, height: 0.16 },
+      { x: 0.36, y: 0.59, width: 0.28, height: 0.16 },
+      { x: 0.68, y: 0.59, width: 0.28, height: 0.16 }
+    ],
+    9: [
+      { x: 0.04, y: 0.02, width: 0.92, height: 0.30 },
+      { x: 0.04, y: 0.36, width: 0.28, height: 0.14 },
+      { x: 0.36, y: 0.36, width: 0.28, height: 0.14 },
+      { x: 0.68, y: 0.36, width: 0.28, height: 0.14 },
+      { x: 0.04, y: 0.54, width: 0.28, height: 0.14 },
+      { x: 0.36, y: 0.54, width: 0.28, height: 0.14 },
+      { x: 0.68, y: 0.54, width: 0.28, height: 0.14 },
+      { x: 0.20, y: 0.72, width: 0.28, height: 0.14 },
+      { x: 0.52, y: 0.72, width: 0.28, height: 0.14 }
+    ]
+  };
+  return layouts[count].map((slot) => ({ ...slot }));
+}
+
+function getLayoutKey() {
+  return `xhs.layout.${document.getElementById('summary-group-size').value}`;
+}
+
+function loadLayout() {
+  const count = Number(document.getElementById('summary-group-size').value);
+  const saved = localStorage.getItem(getLayoutKey());
+  state.layout = saved ? JSON.parse(saved) : defaultLayout(count);
+}
+
+function saveLayout() {
+  localStorage.setItem(getLayoutKey(), JSON.stringify(state.layout));
+  setText('layout-summary', '排版已保存，本机下次导出继续使用。');
+}
+
+function renderLayoutTool() {
+  const canvas = document.getElementById('layout-canvas');
+  if (!canvas) {
+    return;
+  }
+  loadLayout();
+  canvas.innerHTML = '';
+  state.layout.forEach((slot, index) => {
+    const item = document.createElement('div');
+    item.className = 'layout-slot';
+    item.textContent = index + 1;
+    item.style.left = `${slot.x * 100}%`;
+    item.style.top = `${slot.y * 100}%`;
+    item.style.width = `${slot.width * 100}%`;
+    item.style.height = `${slot.height * 100}%`;
+    item.addEventListener('pointerdown', (event) => startLayoutDrag(event, index));
+    canvas.appendChild(item);
+  });
+}
+
+function startLayoutDrag(event, index) {
+  const canvas = document.getElementById('layout-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const slot = state.layout[index];
+  const resizing = event.offsetX > event.currentTarget.clientWidth - 18 && event.offsetY > event.currentTarget.clientHeight - 18;
+  const start = { x: event.clientX, y: event.clientY, slot: { ...slot } };
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.currentTarget.onpointermove = (moveEvent) => {
+    const dx = (moveEvent.clientX - start.x) / rect.width;
+    const dy = (moveEvent.clientY - start.y) / rect.height;
+    if (resizing) {
+      slot.width = Math.max(0.08, Math.min(1 - slot.x, start.slot.width + dx));
+      slot.height = Math.max(0.06, Math.min(1 - slot.y, start.slot.height + dy));
+    } else {
+      slot.x = Math.max(0, Math.min(1 - slot.width, start.slot.x + dx));
+      slot.y = Math.max(0, Math.min(1 - slot.height, start.slot.y + dy));
+    }
+    moveEvent.currentTarget.style.left = `${slot.x * 100}%`;
+    moveEvent.currentTarget.style.top = `${slot.y * 100}%`;
+    moveEvent.currentTarget.style.width = `${slot.width * 100}%`;
+    moveEvent.currentTarget.style.height = `${slot.height * 100}%`;
+  };
 }
 
 function updateProgress(progress = { percent: 0, message: '等待任务' }) {
@@ -160,7 +254,8 @@ async function exportPdf() {
     page_end: pageEnd ? Number(pageEnd) : null,
     subfolder_output: document.getElementById('subfolder-output').checked,
     summary_group_size: summaryEnabled ? Number(summaryGroupSize) : null,
-    background_path: state.backgroundPath || null
+    background_path: state.backgroundPath || null,
+    custom_layout: summaryEnabled ? state.layout : null
   };
   updateProgress({ percent: 0, message: '准备开始导出' });
   const started = await api('/api/documents/export/start', {
@@ -207,6 +302,12 @@ document.getElementById('background-image-btn').addEventListener('click', async 
   });
 });
 document.getElementById('summary-enabled').addEventListener('change', syncSummaryControls);
+document.getElementById('summary-group-size').addEventListener('change', renderLayoutTool);
+document.getElementById('layout-reset-btn').addEventListener('click', () => {
+  localStorage.removeItem(getLayoutKey());
+  renderLayoutTool();
+});
+document.getElementById('layout-save-btn').addEventListener('click', saveLayout);
 document.getElementById('select-document-btn').addEventListener('click', () => runAction(async () => {
   const selected = await window.xhsApp.selectDocumentFile();
   if (!selected) {
@@ -222,6 +323,7 @@ document.getElementById('start-export-btn').addEventListener('click', () => runA
 
 renderProject();
 syncSummaryControls();
+renderLayoutTool();
 refreshBackendStatus();
 setInterval(refreshBackendStatus, 5000);
 if (state.projectDir) {

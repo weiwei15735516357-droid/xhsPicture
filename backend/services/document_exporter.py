@@ -29,6 +29,7 @@ class DocumentExporter:
         subfolder_output: bool,
         summary_group_size: int | None = 5,
         background_path: Path | None = None,
+        custom_layout: list[dict[str, float]] | None = None,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         suffix = file_path.suffix.lower()
@@ -42,6 +43,7 @@ class DocumentExporter:
                 subfolder_output,
                 summary_group_size=summary_group_size,
                 background_path=background_path,
+                custom_layout=custom_layout,
                 progress_callback=progress_callback,
             )
         if suffix in WORD_EXTENSIONS or suffix in POWERPOINT_EXTENSIONS:
@@ -57,6 +59,7 @@ class DocumentExporter:
                 origin_path=file_path,
                 summary_group_size=summary_group_size,
                 background_path=background_path,
+                custom_layout=custom_layout,
                 progress_callback=progress_callback,
             )
         raise ValueError(f"不支持的文档格式：{suffix}")
@@ -73,6 +76,7 @@ class DocumentExporter:
         origin_path: Path | None = None,
         summary_group_size: int | None = None,
         background_path: Path | None = None,
+        custom_layout: list[dict[str, float]] | None = None,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
         document_name = output_name or file_path.stem
@@ -121,6 +125,7 @@ class DocumentExporter:
                     summary_group_size,
                     origin,
                     background_path,
+                    custom_layout,
                     report_output,
                 )
             )
@@ -143,6 +148,7 @@ class DocumentExporter:
         group_size: int,
         origin: str,
         background_path: Path | None,
+        custom_layout: list[dict[str, float]] | None,
         progress_callback: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         assets = []
@@ -153,7 +159,7 @@ class DocumentExporter:
                 continue
             first_page = group[0][0]
             last_page = group[-1][0]
-            canvas = self._compose_summary(group, background_path=background_path)
+            canvas = self._compose_summary(group, background_path=background_path, custom_layout=custom_layout)
             output_path = output_dir / f"{document_name}_汇总_{group_index:03d}_{first_page:03d}-{last_page:03d}.png"
             canvas.save(output_path)
             assets.append(registry.add_asset(output_path, "汇总图", origin))
@@ -171,8 +177,13 @@ class DocumentExporter:
         group: list[tuple[int, Image.Image]],
         background_path: Path | None = None,
         background: Image.Image | None = None,
+        custom_layout: list[dict[str, float]] | None = None,
     ) -> Image.Image:
         canvas = background.copy() if background else self._create_background(background_path)
+        if custom_layout:
+            for (_, image), slot in zip(group, self._custom_slots(custom_layout)):
+                self._paste_contained(canvas, image, slot)
+            return canvas
         top = 18
         hero = (4, top, XHS_WIDTH - 4, 621)
         self._paste_contained(canvas, group[0][1], hero, vertical_align="top")
@@ -181,6 +192,16 @@ class DocumentExporter:
         for (_, image), slot in zip(remaining, slots):
             self._paste_contained(canvas, image, slot)
         return canvas
+
+    def _custom_slots(self, layout: list[dict[str, float]]) -> list[tuple[int, int, int, int]]:
+        slots = []
+        for slot in layout:
+            x1 = int(slot["x"] * XHS_WIDTH)
+            y1 = int(slot["y"] * XHS_HEIGHT)
+            x2 = int((slot["x"] + slot["width"]) * XHS_WIDTH)
+            y2 = int((slot["y"] + slot["height"]) * XHS_HEIGHT)
+            slots.append((x1, y1, min(x2, XHS_WIDTH), min(y2, XHS_HEIGHT)))
+        return slots
 
     def _create_background(self, background_path: Path | None) -> Image.Image:
         if background_path and background_path.exists():
