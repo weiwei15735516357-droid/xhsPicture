@@ -119,6 +119,7 @@ def create_app() -> FastAPI:
                         project_dir=Path(request.project_dir),
                         scene_path=Path(request.scene_path),
                         excel_path=Path(request.excel_path),
+                        text_options=request.text_options.model_dump(),
                         progress_callback=progress,
                     )
                 else:
@@ -137,6 +138,11 @@ def create_app() -> FastAPI:
 
         Thread(target=run_compose, daemon=True).start()
         return {"task": task}
+
+    @app.get("/api/perspective/excel/rows")
+    def list_perspective_excel_rows(excel_path: str) -> dict[str, Any]:
+        rows = PerspectiveComposer().read_excel_rows(Path(excel_path))
+        return {"rows": rows, "count": len(rows)}
 
     @app.get("/api/tasks/{task_id}")
     def get_task(task_id: str) -> dict[str, Any]:

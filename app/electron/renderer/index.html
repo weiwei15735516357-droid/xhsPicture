@@ -136,6 +136,36 @@
             <button id="perspective-overlay-folder-btn" class="perspective-image-control hidden-panel">选择叠图文件夹</button>
           </div>
           <p id="perspective-summary" class="muted">输出固定为 1080×1440，适合小红书 3:4 图片。</p>
+          <div class="excel-preview-panel perspective-excel-control">
+            <div class="preview-nav">
+              <strong>标题预览</strong>
+              <div class="button-row">
+                <button id="excel-prev-btn">上一条</button>
+                <span id="excel-preview-counter">0 / 0</span>
+                <button id="excel-next-btn">下一条</button>
+              </div>
+            </div>
+            <div class="field-row">
+              <label for="excel-preview-id">商品ID</label>
+              <input id="excel-preview-id" readonly />
+            </div>
+            <div class="field-row">
+              <label for="excel-preview-title">标题</label>
+              <textarea id="excel-preview-title" readonly></textarea>
+            </div>
+            <div class="text-control-grid">
+              <label>字号<input id="text-font-size" type="number" min="16" max="220" value="92" /></label>
+              <label>X<input id="text-x" type="number" min="0" max="1080" value="118" /></label>
+              <label>Y<input id="text-y" type="number" min="0" max="1440" value="386" /></label>
+              <label>文字色<input id="text-color" type="color" value="#000000" /></label>
+              <label>描边色<input id="text-stroke-color" type="color" value="#ffffff" /></label>
+              <label>描边<input id="text-stroke-width" type="number" min="0" max="16" value="0" /></label>
+            </div>
+            <label class="checkbox-row compact-checkbox">
+              <input id="text-bold" type="checkbox" checked />
+              加粗
+            </label>
+          </div>
           <div id="perspective-canvas" class="perspective-canvas">
             <div class="empty">选择底图后可预览；图片叠图模式可拖动四个角定位</div>
           </div>

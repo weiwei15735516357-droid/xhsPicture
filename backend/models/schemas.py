@@ -60,6 +60,16 @@ class PerspectivePoint(BaseModel):
     y: float = Field(ge=0, le=1)
 
 
+class TextOverlayOptions(BaseModel):
+    x: int = Field(default=118, ge=0, le=1080)
+    y: int = Field(default=386, ge=0, le=1440)
+    font_size: int = Field(default=92, ge=16, le=220)
+    color: str = "#000000"
+    stroke_color: str = "#ffffff"
+    stroke_width: int = Field(default=0, ge=0, le=16)
+    bold: bool = True
+
+
 class PerspectiveComposeRequest(BaseModel):
     project_dir: str
     scene_path: str
@@ -69,3 +79,4 @@ class PerspectiveComposeRequest(BaseModel):
     points: list[PerspectivePoint] = Field(default_factory=list)
     opacity: float = Field(default=1.0, ge=0.1, le=1.0)
     shadow: bool = True
+    text_options: TextOverlayOptions = Field(default_factory=TextOverlayOptions)

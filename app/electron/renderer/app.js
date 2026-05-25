@@ -10,7 +10,18 @@ const state = {
   perspectiveScenePath: null,
   perspectiveOverlayPaths: [],
   perspectiveExcelPath: null,
+  perspectiveRows: [],
+  perspectivePreviewIndex: 0,
   perspectiveMode: 'excel',
+  perspectiveText: {
+    x: 118,
+    y: 386,
+    fontSize: 92,
+    color: '#000000',
+    strokeColor: '#ffffff',
+    strokeWidth: 0,
+    bold: true
+  },
   perspectivePoints: [
     { x: 0.18, y: 0.24 },
     { x: 0.82, y: 0.24 },
@@ -330,6 +341,100 @@ function resetPerspectivePoints() {
   renderPerspectiveCanvas();
 }
 
+function currentPerspectiveRow() {
+  if (!state.perspectiveRows.length) {
+    return null;
+  }
+  const index = Math.max(0, Math.min(state.perspectivePreviewIndex, state.perspectiveRows.length - 1));
+  return state.perspectiveRows[index];
+}
+
+function getTextOptionsPayload() {
+  return {
+    x: Number(state.perspectiveText.x),
+    y: Number(state.perspectiveText.y),
+    font_size: Number(state.perspectiveText.fontSize),
+    color: state.perspectiveText.color,
+    stroke_color: state.perspectiveText.strokeColor,
+    stroke_width: Number(state.perspectiveText.strokeWidth),
+    bold: Boolean(state.perspectiveText.bold)
+  };
+}
+
+function syncPerspectiveTextControls() {
+  const controls = {
+    'text-x': state.perspectiveText.x,
+    'text-y': state.perspectiveText.y,
+    'text-font-size': state.perspectiveText.fontSize,
+    'text-color': state.perspectiveText.color,
+    'text-stroke-color': state.perspectiveText.strokeColor,
+    'text-stroke-width': state.perspectiveText.strokeWidth
+  };
+  Object.entries(controls).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.value = value;
+    }
+  });
+  const bold = document.getElementById('text-bold');
+  if (bold) {
+    bold.checked = state.perspectiveText.bold;
+  }
+}
+
+function updateExcelPreviewPanel() {
+  const counter = document.getElementById('excel-preview-counter');
+  const idField = document.getElementById('excel-preview-id');
+  const titleField = document.getElementById('excel-preview-title');
+  const previousButton = document.getElementById('excel-prev-btn');
+  const nextButton = document.getElementById('excel-next-btn');
+  const row = currentPerspectiveRow();
+  if (counter) {
+    counter.textContent = row ? `${state.perspectivePreviewIndex + 1} / ${state.perspectiveRows.length}` : '0 / 0';
+  }
+  if (idField) {
+    idField.value = row ? row.product_id : '';
+  }
+  if (titleField) {
+    titleField.value = row ? row.title : '';
+  }
+  if (previousButton) {
+    previousButton.disabled = state.perspectivePreviewIndex <= 0;
+  }
+  if (nextButton) {
+    nextButton.disabled = state.perspectivePreviewIndex >= state.perspectiveRows.length - 1;
+  }
+}
+
+function renderExcelTextOverlay(canvas) {
+  const row = currentPerspectiveRow();
+  if (!row) {
+    const empty = document.createElement('div');
+    empty.className = 'excel-preview-empty';
+    empty.textContent = '选择 Excel 后这里会显示每一行标题的叠图预览';
+    canvas.appendChild(empty);
+    updateExcelPreviewPanel();
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  const overlay = document.createElement('div');
+  overlay.className = 'excel-text-overlay';
+  overlay.textContent = row.title;
+  overlay.style.left = `${(state.perspectiveText.x / 1080) * 100}%`;
+  overlay.style.top = `${(state.perspectiveText.y / 1440) * 100}%`;
+  overlay.style.maxWidth = `${Math.max(8, ((1080 - state.perspectiveText.x - 54) / 1080) * 100)}%`;
+  overlay.style.fontSize = `${Math.max(10, (state.perspectiveText.fontSize / 1440) * rect.height)}px`;
+  overlay.style.color = state.perspectiveText.color;
+  overlay.style.fontWeight = state.perspectiveText.bold ? '800' : '500';
+  if (Number(state.perspectiveText.strokeWidth) > 0) {
+    const width = Math.max(1, Math.round((state.perspectiveText.strokeWidth / 1440) * rect.height));
+    overlay.style.webkitTextStroke = `${width}px ${state.perspectiveText.strokeColor}`;
+    overlay.style.paintOrder = 'stroke fill';
+  }
+  canvas.appendChild(overlay);
+  updateExcelPreviewPanel();
+}
+
 function renderPerspectiveCanvas() {
   const canvas = document.getElementById('perspective-canvas');
   canvas.innerHTML = '';
@@ -343,6 +448,7 @@ function renderPerspectiveCanvas() {
   image.src = fileUrl(state.perspectiveScenePath);
   canvas.appendChild(image);
   if (state.perspectiveMode === 'excel') {
+    renderExcelTextOverlay(canvas);
     updatePerspectiveSummary();
     return;
   }
@@ -371,10 +477,11 @@ function updatePerspectiveSummary() {
   const scene = state.perspectiveScenePath ? '已选择底图' : '未选择底图';
   if (state.perspectiveMode === 'excel') {
     const excel = state.perspectiveExcelPath ? '已选择 Excel' : '未选择 Excel';
-    setText('perspective-summary', `${scene}，${excel}。按商品id命名输出 1080×1440。`);
+    const rows = state.perspectiveRows.length ? `，已读取 ${state.perspectiveRows.length} 条标题` : '';
+    setText('perspective-summary', `${scene}，${excel}${rows}。按商品id命名输出 1080x1440。`);
     return;
   }
-  setText('perspective-summary', `${scene}，叠图 ${state.perspectiveOverlayPaths.length} 张。输出固定 1080×1440。`);
+  setText('perspective-summary', `${scene}，叠图 ${state.perspectiveOverlayPaths.length} 张。输出固定 1080x1440。`);
 }
 
 function syncPerspectiveMode() {
@@ -533,6 +640,21 @@ async function createProject() {
   appendLog(`项目已准备：${state.projectDir}`);
 }
 
+async function loadPerspectiveExcelRows() {
+  if (!state.perspectiveExcelPath) {
+    state.perspectiveRows = [];
+    state.perspectivePreviewIndex = 0;
+    updateExcelPreviewPanel();
+    return;
+  }
+  const data = await api(`/api/perspective/excel/rows?excel_path=${encodeURIComponent(state.perspectiveExcelPath)}`);
+  state.perspectiveRows = data.rows || [];
+  state.perspectivePreviewIndex = 0;
+  updateExcelPreviewPanel();
+  renderPerspectiveCanvas();
+  appendLog(`Excel 已读取 ${state.perspectiveRows.length} 条标题，可逐条预览。`);
+}
+
 async function importPaths(paths) {
   if (!requireProject() || paths.length === 0) {
     return;
@@ -618,7 +740,8 @@ async function runPerspectiveCompose() {
         excel_path: state.perspectiveExcelPath,
         points: state.perspectivePoints,
         opacity: Number(document.getElementById('perspective-opacity').value),
-        shadow: document.getElementById('perspective-shadow').checked
+        shadow: document.getElementById('perspective-shadow').checked,
+        text_options: getTextOptionsPayload()
       })
     });
     const task = await waitForTask(started.task.id);
@@ -709,7 +832,7 @@ document.getElementById('perspective-excel-btn').addEventListener('click', () =>
     return;
   }
   state.perspectiveExcelPath = selected;
-  updatePerspectiveSummary();
+  await loadPerspectiveExcelRows();
 }));
 document.getElementById('perspective-overlays-btn').addEventListener('click', () => runAction(async () => {
   const selected = await window.xhsApp.selectPerspectiveOverlayFiles();
@@ -729,6 +852,33 @@ document.getElementById('perspective-overlay-folder-btn').addEventListener('clic
 }));
 document.getElementById('perspective-reset-btn').addEventListener('click', resetPerspectivePoints);
 document.getElementById('perspective-start-btn').addEventListener('click', runPerspectiveCompose);
+document.getElementById('excel-prev-btn').addEventListener('click', () => {
+  state.perspectivePreviewIndex = Math.max(0, state.perspectivePreviewIndex - 1);
+  renderPerspectiveCanvas();
+});
+document.getElementById('excel-next-btn').addEventListener('click', () => {
+  state.perspectivePreviewIndex = Math.min(state.perspectiveRows.length - 1, state.perspectivePreviewIndex + 1);
+  renderPerspectiveCanvas();
+});
+['text-x', 'text-y', 'text-font-size', 'text-color', 'text-stroke-color', 'text-stroke-width'].forEach((id) => {
+  document.getElementById(id).addEventListener('input', (event) => {
+    const keyMap = {
+      'text-x': 'x',
+      'text-y': 'y',
+      'text-font-size': 'fontSize',
+      'text-color': 'color',
+      'text-stroke-color': 'strokeColor',
+      'text-stroke-width': 'strokeWidth'
+    };
+    const key = keyMap[id];
+    state.perspectiveText[key] = event.target.type === 'number' ? Number(event.target.value) : event.target.value;
+    renderPerspectiveCanvas();
+  });
+});
+document.getElementById('text-bold').addEventListener('change', (event) => {
+  state.perspectiveText.bold = event.target.checked;
+  renderPerspectiveCanvas();
+});
 document.getElementById('summary-enabled').addEventListener('change', syncSummaryControls);
 document.getElementById('layout-reset-btn').addEventListener('click', () => {
   localStorage.removeItem(getLayoutKey());
@@ -784,6 +934,7 @@ document.getElementById('start-export-btn').addEventListener('click', runExportA
 
 renderProject();
 setupNavigation();
+syncPerspectiveTextControls();
 syncPerspectiveMode();
 renderPerspectiveCanvas();
 syncAspectGuardControl();

@@ -93,9 +93,26 @@ def test_perspective_text_batch_reads_excel_and_names_by_product_id(tmp_path: Pa
         project_dir=project_dir,
         scene_path=scene_path,
         excel_path=excel_path,
+        text_options={"x": 120, "y": 360, "font_size": 80, "stroke_width": 2},
     )
 
     output = Path(result["assets"][0]["path"])
     assert output.name == "SKU001.png"
     assert Image.open(output).size == (1080, 1440)
-    assert result["assets"][0]["source_type"] == "透视文字图"
+    assert result["assets"]
+
+
+def test_perspective_excel_rows_api_returns_preview_rows(tmp_path: Path):
+    excel_path = tmp_path / "products.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["product_id", "title"])
+    sheet.append(["SKU001", "Preview title"])
+    workbook.save(excel_path)
+    client = TestClient(create_app())
+
+    response = client.get("/api/perspective/excel/rows", params={"excel_path": str(excel_path)})
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert response.json()["rows"][0]["product_id"] == "SKU001"

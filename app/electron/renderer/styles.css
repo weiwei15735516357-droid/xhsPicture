@@ -177,6 +177,17 @@ input {
   padding: 0 10px;
 }
 
+textarea {
+  min-height: 76px;
+  padding: 8px 10px;
+  border: 1px solid #cbd2d9;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2933;
+  font: inherit;
+  resize: vertical;
+}
+
 .tool-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -361,6 +372,69 @@ input {
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+.excel-preview-panel {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e1e5ea;
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+
+.preview-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#excel-preview-counter {
+  min-width: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #52606d;
+}
+
+.text-control-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(86px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.text-control-grid label {
+  display: grid;
+  gap: 6px;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.text-control-grid input {
+  width: 100%;
+}
+
+.excel-text-overlay {
+  position: absolute;
+  z-index: 2;
+  line-height: 1.25;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.excel-preview-empty {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #52606d;
+  text-align: center;
 }
 
 .empty {

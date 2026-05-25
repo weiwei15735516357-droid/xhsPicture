@@ -50,9 +50,10 @@ class PerspectiveComposer:
         project_dir: Path,
         scene_path: Path,
         excel_path: Path,
+        text_options: dict[str, Any] | None = None,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
-        rows = self._read_excel_rows(excel_path)
+        rows = self.read_excel_rows(excel_path)
         if not rows:
             raise ValueError("Excel 中没有可用数据")
         output_dir = project_dir / "compositions" / datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -62,7 +63,7 @@ class PerspectiveComposer:
         assets = []
         total = len(rows)
         for index, row in enumerate(rows, start=1):
-            composed = self._compose_text(scene, row["title"])
+            composed = self._compose_text(scene, row["title"], text_options or {})
             safe_id = self._safe_filename(row["product_id"])
             output_path = output_dir / f"{safe_id}.png"
             output_path = self._unique_path(output_path)
@@ -93,25 +94,28 @@ class PerspectiveComposer:
         canvas.alpha_composite(warped)
         return canvas.convert("RGB")
 
-    def _compose_text(self, scene: Image.Image, title: str) -> Image.Image:
+    def _compose_text(self, scene: Image.Image, title: str, options: dict[str, Any]) -> Image.Image:
         canvas = scene.convert("RGBA")
         overlay = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(overlay)
-        band_top = int(XHS_HEIGHT * 0.72)
-        draw.rounded_rectangle(
-            (54, band_top, XHS_WIDTH - 54, XHS_HEIGHT - 72),
-            radius=28,
-            fill=(255, 255, 255, 224),
-        )
-        font = self._title_font()
-        lines = self._wrap_text(title, font, XHS_WIDTH - 160)
-        line_height = font.size + 14
-        total_height = len(lines) * line_height
-        y = band_top + ((XHS_HEIGHT - 72 - band_top) - total_height) // 2
-        for line in lines[:4]:
-            bbox = draw.textbbox((0, 0), line, font=font)
-            x = (XHS_WIDTH - (bbox[2] - bbox[0])) // 2
-            draw.text((x, y), line, fill=(24, 24, 27, 255), font=font)
+        x = int(options.get("x", 118))
+        y = int(options.get("y", 386))
+        font_size = int(options.get("font_size", 92))
+        stroke_width = int(options.get("stroke_width", 0))
+        font = self._title_font(font_size=font_size, bold=bool(options.get("bold", True)))
+        lines = self._wrap_text(title, font, max(80, XHS_WIDTH - x - 54))
+        line_height = int(font_size * 1.25)
+        fill = self._hex_to_rgba(str(options.get("color", "#000000")))
+        stroke_fill = self._hex_to_rgba(str(options.get("stroke_color", "#ffffff")))
+        for line in lines[:5]:
+            draw.text(
+                (x, y),
+                line,
+                fill=fill,
+                font=font,
+                stroke_width=stroke_width,
+                stroke_fill=stroke_fill,
+            )
             y += line_height
         canvas.alpha_composite(overlay)
         return canvas.convert("RGB")
@@ -142,7 +146,7 @@ class PerspectiveComposer:
         top = (new_height - XHS_HEIGHT) // 2
         return resized.crop((left, top, left + XHS_WIDTH, top + XHS_HEIGHT))
 
-    def _read_excel_rows(self, excel_path: Path) -> list[dict[str, str]]:
+    def read_excel_rows(self, excel_path: Path) -> list[dict[str, str]]:
         if excel_path.suffix.lower() == ".csv":
             with excel_path.open("r", encoding="utf-8-sig", newline="") as file:
                 return self._normalize_rows(list(csv.DictReader(file)))
@@ -177,16 +181,29 @@ class PerspectiveComposer:
                 return str(value).strip()
         return ""
 
-    def _title_font(self) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-        candidates = [
-            Path("C:/Windows/Fonts/msyhbd.ttc"),
+    def _title_font(self, font_size: int = 56, bold: bool = True) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        candidates = []
+        if bold:
+            candidates.append(Path("C:/Windows/Fonts/msyhbd.ttc"))
+        candidates.extend([
             Path("C:/Windows/Fonts/msyh.ttc"),
             Path("C:/Windows/Fonts/simhei.ttf"),
-        ]
+        ])
         for path in candidates:
             if path.exists():
-                return ImageFont.truetype(str(path), 56)
+                return ImageFont.truetype(str(path), font_size)
         return ImageFont.load_default()
+
+    def _hex_to_rgba(self, value: str) -> tuple[int, int, int, int]:
+        text = value.strip().lstrip("#")
+        if len(text) == 3:
+            text = "".join(char * 2 for char in text)
+        if len(text) != 6:
+            return (0, 0, 0, 255)
+        try:
+            return (int(text[0:2], 16), int(text[2:4], 16), int(text[4:6], 16), 255)
+        except ValueError:
+            return (0, 0, 0, 255)
 
     def _wrap_text(self, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, max_width: int) -> list[str]:
         lines = []
