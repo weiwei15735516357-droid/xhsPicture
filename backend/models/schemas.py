@@ -70,6 +70,12 @@ class TextOverlayOptions(BaseModel):
     bold: bool = True
 
 
+class TextOverlayRow(BaseModel):
+    product_id: str
+    title: str
+    text_options: TextOverlayOptions = Field(default_factory=TextOverlayOptions)
+
+
 class PerspectiveComposeRequest(BaseModel):
     project_dir: str
     scene_path: str
@@ -80,3 +86,4 @@ class PerspectiveComposeRequest(BaseModel):
     opacity: float = Field(default=1.0, ge=0.1, le=1.0)
     shadow: bool = True
     text_options: TextOverlayOptions = Field(default_factory=TextOverlayOptions)
+    text_rows: list[TextOverlayRow] = Field(default_factory=list)

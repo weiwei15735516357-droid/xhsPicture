@@ -120,6 +120,7 @@ def create_app() -> FastAPI:
                         scene_path=Path(request.scene_path),
                         excel_path=Path(request.excel_path),
                         text_options=request.text_options.model_dump(),
+                        text_rows=[row.model_dump() for row in request.text_rows],
                         progress_callback=progress,
                     )
                 else:

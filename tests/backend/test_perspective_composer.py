@@ -116,3 +116,32 @@ def test_perspective_excel_rows_api_returns_preview_rows(tmp_path: Path):
     assert response.status_code == 200
     assert response.json()["count"] == 1
     assert response.json()["rows"][0]["product_id"] == "SKU001"
+
+
+def test_perspective_text_batch_accepts_per_row_text_options(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    scene_path = tmp_path / "scene.png"
+    excel_path = tmp_path / "products.xlsx"
+    Image.new("RGB", (900, 1200), (240, 240, 240)).save(scene_path)
+    Workbook().save(excel_path)
+
+    result = PerspectiveComposer().compose_text_batch(
+        project_dir=project_dir,
+        scene_path=scene_path,
+        excel_path=excel_path,
+        text_rows=[
+            {
+                "product_id": "SKU001",
+                "title": "Short title",
+                "text_options": {"x": 80, "y": 180, "font_size": 64, "bold": False},
+            },
+            {
+                "product_id": "SKU002",
+                "title": "Long title",
+                "text_options": {"x": 120, "y": 420, "font_size": 96, "bold": True},
+            },
+        ],
+    )
+
+    assert [Path(asset["path"]).name for asset in result["assets"]] == ["SKU001.png", "SKU002.png"]

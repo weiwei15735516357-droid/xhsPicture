@@ -51,9 +51,10 @@ class PerspectiveComposer:
         scene_path: Path,
         excel_path: Path,
         text_options: dict[str, Any] | None = None,
+        text_rows: list[dict[str, Any]] | None = None,
         progress_callback: Callable[[int, int, str], None] | None = None,
     ) -> dict[str, Any]:
-        rows = self.read_excel_rows(excel_path)
+        rows = text_rows or self.read_excel_rows(excel_path)
         if not rows:
             raise ValueError("Excel 中没有可用数据")
         output_dir = project_dir / "compositions" / datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -63,8 +64,9 @@ class PerspectiveComposer:
         assets = []
         total = len(rows)
         for index, row in enumerate(rows, start=1):
-            composed = self._compose_text(scene, row["title"], text_options or {})
-            safe_id = self._safe_filename(row["product_id"])
+            row_options = row.get("text_options") or text_options or {}
+            composed = self._compose_text(scene, str(row["title"]), row_options)
+            safe_id = self._safe_filename(str(row["product_id"]))
             output_path = output_dir / f"{safe_id}.png"
             output_path = self._unique_path(output_path)
             composed.save(output_path)

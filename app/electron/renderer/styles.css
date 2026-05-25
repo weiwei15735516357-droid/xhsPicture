@@ -346,6 +346,29 @@ textarea {
   user-select: none;
 }
 
+.perspective-panel {
+  display: grid;
+  grid-template-columns: 320px minmax(420px, 1fr);
+  align-items: start;
+  gap: 12px 16px;
+}
+
+.perspective-panel > h2 {
+  grid-column: 1 / -1;
+}
+
+.perspective-panel > :not(h2):not(.excel-preview-panel) {
+  grid-column: 1;
+}
+
+.perspective-panel .button-row {
+  flex-wrap: wrap;
+}
+
+.perspective-panel .perspective-canvas {
+  max-width: 300px;
+}
+
 .perspective-scene {
   width: 100%;
   height: 100%;
@@ -375,11 +398,15 @@ textarea {
 }
 
 .excel-preview-panel {
+  grid-column: 2;
+  grid-row: 2 / span 9;
   margin-top: 14px;
   padding: 12px;
   border: 1px solid #e1e5ea;
   border-radius: 6px;
   background: #fbfcfe;
+  max-height: calc(100vh - 210px);
+  overflow: auto;
 }
 
 .preview-nav {
@@ -395,6 +422,70 @@ textarea {
   align-items: center;
   justify-content: center;
   color: #52606d;
+}
+
+.excel-preview-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.excel-preview-card {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.excel-preview-card.selected {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.12);
+}
+
+.excel-card-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.excel-card-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.excel-card-form label {
+  display: grid;
+  gap: 5px;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.excel-card-form .wide {
+  grid-column: 1 / -1;
+}
+
+.excel-card-form .inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.excel-card-form textarea {
+  min-height: 58px;
+}
+
+.excel-card-form input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
 }
 
 .text-control-grid {
