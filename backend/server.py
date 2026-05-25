@@ -4,11 +4,18 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 
-from backend.models.schemas import CreateLogRequest, CreateProjectRequest, ExportDocumentRequest, ImportAssetsRequest
+from backend.models.schemas import (
+    CreateLogRequest,
+    CreateProjectRequest,
+    ExportDocumentRequest,
+    ImportAssetsRequest,
+    PerspectiveComposeRequest,
+)
 from backend.services.asset_importer import AssetImporter
 from backend.services.asset_registry import AssetRegistry
 from backend.services.document_exporter import DocumentExporter
 from backend.services.log_service import LogService
+from backend.services.perspective_composer import PerspectiveComposer
 from backend.services.project_service import ProjectService
 from backend.services.settings_store import SettingsStore
 from backend.services.task_store import task_store
@@ -95,6 +102,30 @@ def create_app() -> FastAPI:
                 task_store.fail(task["id"], str(exc))
 
         Thread(target=run_export, daemon=True).start()
+        return {"task": task}
+
+    @app.post("/api/perspective/compose/start")
+    def start_perspective_compose(request: PerspectiveComposeRequest) -> dict[str, Any]:
+        task = task_store.create_running("perspective_compose", "等待开始透视合成")
+
+        def run_compose() -> None:
+            try:
+                result = PerspectiveComposer().compose_batch(
+                    project_dir=Path(request.project_dir),
+                    scene_path=Path(request.scene_path),
+                    overlay_paths=[Path(item) for item in request.overlay_paths],
+                    points=[point.model_dump() for point in request.points],
+                    opacity=request.opacity,
+                    shadow=request.shadow,
+                    progress_callback=lambda current, total, message: task_store.update_progress(
+                        task["id"], current, total, message
+                    ),
+                )
+                task_store.complete(task["id"], result)
+            except Exception as exc:
+                task_store.fail(task["id"], str(exc))
+
+        Thread(target=run_compose, daemon=True).start()
         return {"task": task}
 
     @app.get("/api/tasks/{task_id}")

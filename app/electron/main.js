@@ -139,6 +139,28 @@ if (app) {
     const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getDocumentImportFilters() });
     return result.canceled ? null : result.filePaths[0];
   });
+  ipcMain.handle('dialog:select-perspective-scene-image', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getImageImportFilters() });
+    return result.canceled ? null : result.filePaths[0];
+  });
+  ipcMain.handle('dialog:select-perspective-overlay-files', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: getImageImportFilters()
+    });
+    return result.canceled ? [] : result.filePaths;
+  });
+  ipcMain.handle('dialog:select-perspective-overlay-folder', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    if (result.canceled) {
+      return [];
+    }
+    const extensions = new Set(getImageImportFilters()[0].extensions.map((extension) => `.${extension}`));
+    return fs
+      .readdirSync(result.filePaths[0])
+      .filter((filename) => extensions.has(path.extname(filename).toLowerCase()))
+      .map((filename) => path.join(result.filePaths[0], filename));
+  });
   ipcMain.handle('shell:show-item-in-folder', (_event, filePath) => {
     shell.showItemInFolder(filePath);
     return true;

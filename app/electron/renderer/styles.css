@@ -77,8 +77,6 @@ h2 {
 
 .topbar p,
 .muted,
-.asset-item span,
-.asset-item small,
 .empty {
   color: #66788a;
 }
@@ -103,7 +101,6 @@ h2 {
 }
 
 .project-bar,
-.asset-section,
 .panel {
   background: #ffffff;
   border: 1px solid #d9dee7;
@@ -170,7 +167,7 @@ input {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: minmax(520px, 2fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr) minmax(260px, 0.7fr);
   gap: 14px;
   margin-bottom: 14px;
 }
@@ -313,93 +310,44 @@ input {
   cursor: nwse-resize;
 }
 
-.asset-section {
-  padding: 16px;
-}
-
-.asset-toolbar {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) 160px 160px;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.asset-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 14px;
-  align-items: start;
-  margin-top: 12px;
-}
-
-.asset-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
-}
-
-.asset-item {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid #e1e5ea;
-  border-radius: 6px;
-  background: #ffffff;
-  cursor: pointer;
-}
-
-.asset-item.selected {
-  border-color: #1a73e8;
-  box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.16);
-}
-
-.asset-thumb {
+.perspective-canvas {
+  position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
-  object-fit: cover;
-  background: #eef2f7;
-  border: 1px solid #e5e7eb;
-}
-
-.asset-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: #64748b;
-  font-size: 12px;
-}
-
-.asset-item strong,
-.asset-item span,
-.asset-item small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-
-.asset-preview {
-  min-height: 320px;
-  padding: 12px;
-  border: 1px solid #d8dee6;
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #cbd2d9;
   border-radius: 6px;
-  background: #ffffff;
-}
-
-.preview-detail {
-  display: grid;
-  gap: 10px;
-}
-
-.preview-detail img {
-  width: 100%;
-  max-height: 420px;
-  object-fit: contain;
   background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  user-select: none;
 }
 
-.preview-detail small {
-  color: #64748b;
-  word-break: break-all;
+.perspective-scene {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.perspective-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #d93025;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+  touch-action: none;
+}
+
+.perspective-canvas svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
 .empty {

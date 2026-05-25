@@ -7,8 +7,15 @@ const state = {
   followupLayout: [],
   selectedLayoutType: 'first',
   selectedLayoutIndex: 0,
-  assets: [],
-  selectedAssetId: null,
+  perspectiveScenePath: null,
+  perspectiveOverlayPaths: [],
+  perspectivePoints: [
+    { x: 0.18, y: 0.24 },
+    { x: 0.82, y: 0.24 },
+    { x: 0.82, y: 0.70 },
+    { x: 0.18, y: 0.70 }
+  ],
+  perspectiveInProgress: false,
   exportInProgress: false,
   aspectGuard: localStorage.getItem('xhs.layoutAspectGuard') !== 'false'
 };
@@ -69,75 +76,8 @@ function renderProject() {
   setText('background-summary', state.backgroundPath ? `底图：${state.backgroundPath}` : '未选择底图时使用浅灰背景。');
 }
 
-function renderAssets(assets) {
-  state.assets = assets;
-  if (!assets.some((asset) => asset.id === state.selectedAssetId)) {
-    state.selectedAssetId = assets[0]?.id || null;
-  }
-  setText('asset-count', `${assets.length} 张`);
-  const list = document.getElementById('asset-list');
-  if (assets.length === 0) {
-    list.innerHTML = '<div class="empty">暂无素材</div>';
-    renderAssetPreview(null);
-    return;
-  }
-  list.innerHTML = '';
-  for (const asset of assets) {
-    const item = document.createElement('div');
-    item.className = 'asset-item';
-    if (asset.id === state.selectedAssetId) {
-      item.classList.add('selected');
-    }
-    item.innerHTML = `
-      <img class="asset-thumb" src="${fileUrl(asset.path)}" alt="${escapeHtml(asset.filename)}" />
-      <strong>${escapeHtml(asset.filename)}</strong>
-      <div class="asset-meta">
-        <span>${escapeHtml(asset.source_type || '')}</span>
-        <span>${formatDimensions(asset)}</span>
-      </div>
-    `;
-    item.addEventListener('click', () => {
-      state.selectedAssetId = asset.id;
-      renderAssets(state.assets);
-    });
-    list.appendChild(item);
-  }
-  renderAssetPreview(selectedAsset());
-}
-
-function selectedAsset() {
-  return state.assets.find((asset) => asset.id === state.selectedAssetId) || null;
-}
-
-function renderAssetPreview(asset) {
-  document.getElementById('asset-preview-empty').classList.toggle('hidden-panel', Boolean(asset));
-  document.getElementById('asset-preview-detail').classList.toggle('hidden-panel', !asset);
-  if (!asset) {
-    return;
-  }
-  document.getElementById('asset-preview-image').src = fileUrl(asset.path);
-  setText('asset-preview-name', asset.filename);
-  setText('asset-preview-meta', `${asset.source_type || ''} · ${formatDimensions(asset)} · ${formatFileSize(asset.file_size)}`);
-  setText('asset-preview-path', asset.path);
-}
-
 function fileUrl(path) {
   return encodeURI(`file:///${path.replace(/\\/g, '/')}`);
-}
-
-function formatDimensions(asset) {
-  return asset.width && asset.height ? `${asset.width}×${asset.height}` : '未知尺寸';
-}
-
-function formatFileSize(size) {
-  const value = Number(size || 0);
-  if (value >= 1024 * 1024) {
-    return `${(value / 1024 / 1024).toFixed(1)} MB`;
-  }
-  if (value >= 1024) {
-    return `${Math.round(value / 1024)} KB`;
-  }
-  return `${value} B`;
 }
 
 function escapeHtml(value) {
@@ -359,6 +299,81 @@ function renderLayoutCanvas(canvasId, layout, type) {
   });
 }
 
+function resetPerspectivePoints() {
+  state.perspectivePoints = [
+    { x: 0.18, y: 0.24 },
+    { x: 0.82, y: 0.24 },
+    { x: 0.82, y: 0.70 },
+    { x: 0.18, y: 0.70 }
+  ];
+  renderPerspectiveCanvas();
+}
+
+function renderPerspectiveCanvas() {
+  const canvas = document.getElementById('perspective-canvas');
+  canvas.innerHTML = '';
+  if (!state.perspectiveScenePath) {
+    canvas.innerHTML = '<div class="empty">选择场景图后，在预览上拖动四个角定位叠图区域</div>';
+    updatePerspectiveSummary();
+    return;
+  }
+  const image = document.createElement('img');
+  image.className = 'perspective-scene';
+  image.src = fileUrl(state.perspectiveScenePath);
+  canvas.appendChild(image);
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('fill', 'rgba(217,48,37,0.18)');
+  polygon.setAttribute('stroke', '#d93025');
+  polygon.setAttribute('stroke-width', '2');
+  polygon.setAttribute('points', state.perspectivePoints.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.appendChild(polygon);
+  canvas.appendChild(svg);
+  state.perspectivePoints.forEach((point, index) => {
+    const handle = document.createElement('div');
+    handle.className = 'perspective-handle';
+    handle.style.left = `${point.x * 100}%`;
+    handle.style.top = `${point.y * 100}%`;
+    handle.addEventListener('pointerdown', (event) => startPerspectiveDrag(event, index));
+    canvas.appendChild(handle);
+  });
+  updatePerspectiveSummary();
+}
+
+function updatePerspectiveSummary() {
+  const scene = state.perspectiveScenePath ? '已选择场景图' : '未选择场景图';
+  setText('perspective-summary', `${scene}，叠图 ${state.perspectiveOverlayPaths.length} 张。输出固定 1080×1440。`);
+}
+
+function startPerspectiveDrag(event, index) {
+  event.preventDefault();
+  const canvas = document.getElementById('perspective-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const target = event.currentTarget;
+  target.setPointerCapture(event.pointerId);
+  target.onpointermove = (moveEvent) => {
+    const x = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (moveEvent.clientY - rect.top) / rect.height));
+    state.perspectivePoints[index] = { x, y };
+    target.style.left = `${x * 100}%`;
+    target.style.top = `${y * 100}%`;
+    const polygon = canvas.querySelector('polygon');
+    if (polygon) {
+      polygon.setAttribute('points', state.perspectivePoints.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
+    }
+  };
+  target.onpointerup = target.onpointercancel = (endEvent) => {
+    if (target.hasPointerCapture(endEvent.pointerId)) {
+      target.releasePointerCapture(endEvent.pointerId);
+    }
+    target.onpointermove = null;
+    target.onpointerup = null;
+    target.onpointercancel = null;
+  };
+}
+
 function startLayoutDrag(event, index, type) {
   event.preventDefault();
   state.selectedLayoutType = type;
@@ -460,43 +475,7 @@ async function waitForTask(taskId) {
 }
 
 async function refreshAssets() {
-  if (!requireProject()) {
-    return;
-  }
-  const params = new URLSearchParams({
-    project_dir: state.projectDir,
-    sort: document.getElementById('asset-sort').value
-  });
-  const sourceType = document.getElementById('asset-source-filter').value;
-  const query = document.getElementById('asset-search').value.trim();
-  if (sourceType) {
-    params.set('source_type', sourceType);
-  }
-  if (query) {
-    params.set('q', query);
-  }
-  const data = await api(`/api/assets?${params.toString()}`);
-  renderAssets(data.assets);
-}
-
-async function deleteSelectedAsset() {
-  if (!requireProject()) {
-    return;
-  }
-  const asset = selectedAsset();
-  if (!asset) {
-    appendLog('请先选择要删除的素材。');
-    return;
-  }
-  const deleteFile = document.getElementById('asset-delete-file').checked;
-  const params = new URLSearchParams({
-    project_dir: state.projectDir,
-    delete_file: deleteFile ? 'true' : 'false'
-  });
-  await api(`/api/assets/${asset.id}?${params.toString()}`, { method: 'DELETE' });
-  appendLog(deleteFile ? `已删除素材和本地文件：${asset.filename}` : `已删除素材记录：${asset.filename}`);
-  state.selectedAssetId = null;
-  await refreshAssets();
+  await refreshBackendStatus();
 }
 
 async function createProject() {
@@ -512,7 +491,6 @@ async function createProject() {
   localStorage.setItem('xhs.currentProjectDir', state.projectDir);
   renderProject();
   appendLog(`项目已准备：${state.projectDir}`);
-  await refreshAssets();
 }
 
 async function importPaths(paths) {
@@ -562,7 +540,50 @@ async function exportPdf() {
   const mode = summaryEnabled ? `首图 ${summaryGroupSize} 张/后续 ${state.followupLayout.length} 张叠图` : '不叠图，逐页导出';
   setText('document-summary', `已导出 ${assets.length} 张 PNG（${mode}）。`);
   appendLog(`文档转 PNG 完成，生成 ${assets.length} 张（${mode}）。`);
-  await refreshAssets();
+}
+
+async function runPerspectiveCompose() {
+  if (!requireProject()) {
+    return;
+  }
+  if (!state.perspectiveScenePath) {
+    appendLog('请先选择场景图。');
+    return;
+  }
+  if (state.perspectiveOverlayPaths.length === 0) {
+    appendLog('请先选择叠图。');
+    return;
+  }
+  if (state.perspectiveInProgress) {
+    appendLog('透视合成正在执行，请等待完成。');
+    return;
+  }
+  const button = document.getElementById('perspective-start-btn');
+  state.perspectiveInProgress = true;
+  button.disabled = true;
+  button.textContent = '合成中...';
+  try {
+    updateProgress({ percent: 0, message: '准备开始透视合成' });
+    const started = await api('/api/perspective/compose/start', {
+      method: 'POST',
+      body: JSON.stringify({
+        project_dir: state.projectDir,
+        scene_path: state.perspectiveScenePath,
+        overlay_paths: state.perspectiveOverlayPaths,
+        points: state.perspectivePoints,
+        opacity: Number(document.getElementById('perspective-opacity').value),
+        shadow: document.getElementById('perspective-shadow').checked
+      })
+    });
+    const task = await waitForTask(started.task.id);
+    appendLog(`透视合成完成，生成 ${task.result.assets.length} 张图片。`);
+  } catch (error) {
+    appendLog(`错误：${error.message}`);
+  } finally {
+    state.perspectiveInProgress = false;
+    button.disabled = false;
+    button.textContent = '开始批量合成';
+  }
 }
 
 async function runAction(action) {
@@ -595,16 +616,6 @@ async function runExportAction() {
 
 document.getElementById('create-project-btn').addEventListener('click', () => runAction(createProject));
 document.getElementById('refresh-assets-btn').addEventListener('click', () => runAction(refreshAssets));
-document.getElementById('asset-search').addEventListener('input', () => runAction(refreshAssets));
-document.getElementById('asset-source-filter').addEventListener('change', () => runAction(refreshAssets));
-document.getElementById('asset-sort').addEventListener('change', () => runAction(refreshAssets));
-document.getElementById('asset-open-folder-btn').addEventListener('click', () => {
-  const asset = selectedAsset();
-  if (asset) {
-    window.xhsApp.showItemInFolder(asset.path);
-  }
-});
-document.getElementById('asset-delete-record-btn').addEventListener('click', () => runAction(deleteSelectedAsset));
 document.getElementById('import-files-btn').addEventListener('click', async () => {
   await runAction(async () => importPaths(await window.xhsApp.selectImportFiles()));
 });
@@ -632,6 +643,32 @@ document.getElementById('clear-background-btn').addEventListener('click', () => 
   renderProject();
   appendLog('已删除底图，导出时使用浅灰背景。');
 });
+document.getElementById('perspective-scene-btn').addEventListener('click', () => runAction(async () => {
+  const selected = await window.xhsApp.selectPerspectiveSceneImage();
+  if (!selected) {
+    return;
+  }
+  state.perspectiveScenePath = selected;
+  renderPerspectiveCanvas();
+}));
+document.getElementById('perspective-overlays-btn').addEventListener('click', () => runAction(async () => {
+  const selected = await window.xhsApp.selectPerspectiveOverlayFiles();
+  if (selected.length === 0) {
+    return;
+  }
+  state.perspectiveOverlayPaths = selected;
+  updatePerspectiveSummary();
+}));
+document.getElementById('perspective-overlay-folder-btn').addEventListener('click', () => runAction(async () => {
+  const selected = await window.xhsApp.selectPerspectiveOverlayFolder();
+  if (selected.length === 0) {
+    return;
+  }
+  state.perspectiveOverlayPaths = selected;
+  updatePerspectiveSummary();
+}));
+document.getElementById('perspective-reset-btn').addEventListener('click', resetPerspectivePoints);
+document.getElementById('perspective-start-btn').addEventListener('click', runPerspectiveCompose);
 document.getElementById('summary-enabled').addEventListener('change', syncSummaryControls);
 document.getElementById('layout-reset-btn').addEventListener('click', () => {
   localStorage.removeItem(getLayoutKey());
@@ -686,11 +723,9 @@ document.getElementById('select-document-btn').addEventListener('click', () => r
 document.getElementById('start-export-btn').addEventListener('click', runExportAction);
 
 renderProject();
+renderPerspectiveCanvas();
 syncAspectGuardControl();
 syncSummaryControls();
 renderLayoutTool();
 refreshBackendStatus();
 setInterval(refreshBackendStatus, 5000);
-if (state.projectDir) {
-  runAction(refreshAssets);
-}

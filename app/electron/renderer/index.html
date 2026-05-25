@@ -10,10 +10,8 @@
     <aside class="sidebar">
       <div class="brand">小红书图片工作台</div>
       <button class="nav active">工作台</button>
-      <button class="nav">素材池</button>
       <button class="nav">文档转图</button>
       <button class="nav">透视合成</button>
-      <button class="nav">拼图模板</button>
       <button class="nav">导出任务</button>
       <button class="nav">飞书上传</button>
       <button class="nav">设置</button>
@@ -23,7 +21,7 @@
       <section class="topbar">
         <div>
           <h1>工作台</h1>
-          <p>本地项目、图片导入、PPT/Word/PDF 转 PNG。</p>
+          <p>本地项目、文档转图、批量透视合成。</p>
         </div>
         <div id="backend-status" class="status">后端检测中</div>
       </section>
@@ -35,7 +33,7 @@
         </div>
         <div class="button-row">
           <button id="create-project-btn">新建/选择项目</button>
-          <button id="refresh-assets-btn">刷新素材</button>
+          <button id="refresh-assets-btn">刷新状态</button>
         </div>
       </section>
 
@@ -126,6 +124,31 @@
           </details>
         </article>
 
+        <article class="panel perspective-panel">
+          <h2>批量透视合成</h2>
+          <div class="button-row export-actions">
+            <button id="perspective-scene-btn">选择场景图</button>
+            <button id="perspective-overlays-btn">选择叠图</button>
+            <button id="perspective-overlay-folder-btn">选择叠图文件夹</button>
+          </div>
+          <p id="perspective-summary" class="muted">输出固定为 1080×1440，适合小红书 3:4 图片。</p>
+          <div id="perspective-canvas" class="perspective-canvas">
+            <div class="empty">选择场景图后，在预览上拖动四个角定位叠图区域</div>
+          </div>
+          <div class="field-row">
+            <label for="perspective-opacity">透明度</label>
+            <input id="perspective-opacity" type="range" min="0.1" max="1" step="0.05" value="1" />
+          </div>
+          <label class="checkbox-row">
+            <input id="perspective-shadow" type="checkbox" checked />
+            添加柔和阴影
+          </label>
+          <div class="button-row export-actions">
+            <button id="perspective-reset-btn">重置四角</button>
+            <button id="perspective-start-btn">开始批量合成</button>
+          </div>
+        </article>
+
         <article class="panel">
           <h2>任务状态</h2>
           <p id="task-summary">暂无任务</p>
@@ -142,49 +165,6 @@
         </article>
       </section>
 
-      <section class="asset-section">
-        <div class="section-heading">
-          <h2>素材池</h2>
-          <span id="asset-count">0 张</span>
-        </div>
-        <div class="asset-toolbar">
-          <input id="asset-search" type="search" placeholder="搜索文件名" />
-          <select id="asset-source-filter">
-            <option value="">全部来源</option>
-            <option value="汇总图">汇总图</option>
-            <option value="文档页">文档页</option>
-            <option value="普通图片">普通图片</option>
-          </select>
-          <select id="asset-sort">
-            <option value="created_desc">最新优先</option>
-            <option value="created_asc">最早优先</option>
-            <option value="filename_asc">文件名 A-Z</option>
-            <option value="filename_desc">文件名 Z-A</option>
-          </select>
-        </div>
-        <div class="asset-workspace">
-          <div id="asset-list" class="asset-list">
-            <div class="empty">暂无素材</div>
-          </div>
-          <aside class="asset-preview">
-            <div id="asset-preview-empty" class="empty">选择一张图片查看预览</div>
-            <div id="asset-preview-detail" class="preview-detail hidden-panel">
-              <img id="asset-preview-image" alt="素材预览" />
-              <strong id="asset-preview-name"></strong>
-              <p id="asset-preview-meta" class="muted"></p>
-              <small id="asset-preview-path"></small>
-              <div class="button-row">
-                <button id="asset-open-folder-btn">打开文件夹</button>
-                <button id="asset-delete-record-btn">删除记录</button>
-              </div>
-              <label class="checkbox-row compact-checkbox">
-                <input id="asset-delete-file" type="checkbox" />
-                同时删除本地文件
-              </label>
-            </div>
-          </aside>
-        </div>
-      </section>
     </main>
 
     <script src="app.js"></script>

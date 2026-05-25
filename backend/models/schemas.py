@@ -53,3 +53,17 @@ class ExportDocumentRequest(BaseModel):
     background_path: str | None = None
     custom_layout: list[LayoutSlot] | None = None
     followup_layout: list[LayoutSlot] | None = None
+
+
+class PerspectivePoint(BaseModel):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
+class PerspectiveComposeRequest(BaseModel):
+    project_dir: str
+    scene_path: str
+    overlay_paths: list[str]
+    points: list[PerspectivePoint] = Field(min_length=4, max_length=4)
+    opacity: float = Field(default=1.0, ge=0.1, le=1.0)
+    shadow: bool = True
