@@ -2,6 +2,7 @@ from pathlib import Path
 from time import sleep
 
 from fastapi.testclient import TestClient
+from openpyxl import Workbook
 from PIL import Image
 
 from backend.server import create_app
@@ -74,3 +75,27 @@ def test_perspective_compose_start_api_reports_completed_task(tmp_path: Path):
     assert response.status_code == 200
     assert task["status"] == "completed"
     assert len(task["result"]["assets"]) == 1
+
+
+def test_perspective_text_batch_reads_excel_and_names_by_product_id(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    scene_path = tmp_path / "scene.png"
+    excel_path = tmp_path / "products.xlsx"
+    Image.new("RGB", (900, 1200), (240, 240, 240)).save(scene_path)
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["商品id", "标题"])
+    sheet.append(["SKU001", "这是一条小红书商品标题"])
+    workbook.save(excel_path)
+
+    result = PerspectiveComposer().compose_text_batch(
+        project_dir=project_dir,
+        scene_path=scene_path,
+        excel_path=excel_path,
+    )
+
+    output = Path(result["assets"][0]["path"])
+    assert output.name == "SKU001.png"
+    assert Image.open(output).size == (1080, 1440)
+    assert result["assets"][0]["source_type"] == "透视文字图"

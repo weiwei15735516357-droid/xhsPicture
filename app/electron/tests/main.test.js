@@ -8,6 +8,7 @@ const {
   getBackendWorkingDirectory,
   getImageImportFilters,
   getDocumentImportFilters,
+  getSpreadsheetImportFilters,
   getPythonExecutable
 } = require('../main');
 
@@ -62,6 +63,13 @@ test('document import filters include pdf word and powerpoint files', () => {
     { name: 'Word 文档', extensions: ['doc', 'docx'] },
     { name: 'PDF 文件', extensions: ['pdf'] },
     { name: '所有支持文档', extensions: ['ppt', 'pptx', 'doc', 'docx', 'pdf'] },
+    { name: '所有文件', extensions: ['*'] }
+  ]);
+});
+
+test('spreadsheet import filters include xlsx and csv files', () => {
+  assert.deepStrictEqual(getSpreadsheetImportFilters(), [
+    { name: 'Excel 或 CSV 表格', extensions: ['xlsx', 'xlsm', 'csv'] },
     { name: '所有文件', extensions: ['*'] }
   ]);
 });

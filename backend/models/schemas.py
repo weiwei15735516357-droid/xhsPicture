@@ -63,7 +63,9 @@ class PerspectivePoint(BaseModel):
 class PerspectiveComposeRequest(BaseModel):
     project_dir: str
     scene_path: str
-    overlay_paths: list[str]
-    points: list[PerspectivePoint] = Field(min_length=4, max_length=4)
+    mode: str = "image"
+    overlay_paths: list[str] = Field(default_factory=list)
+    excel_path: str | None = None
+    points: list[PerspectivePoint] = Field(default_factory=list)
     opacity: float = Field(default=1.0, ge=0.1, le=1.0)
     shadow: bool = True

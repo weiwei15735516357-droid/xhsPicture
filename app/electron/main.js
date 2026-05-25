@@ -42,6 +42,13 @@ function getDocumentImportFilters() {
   ];
 }
 
+function getSpreadsheetImportFilters() {
+  return [
+    { name: 'Excel 或 CSV 表格', extensions: ['xlsx', 'xlsm', 'csv'] },
+    { name: '所有文件', extensions: ['*'] }
+  ];
+}
+
 function getPythonExecutable() {
   if (process.env.XHS_PYTHON) {
     return process.env.XHS_PYTHON;
@@ -161,6 +168,10 @@ if (app) {
       .filter((filename) => extensions.has(path.extname(filename).toLowerCase()))
       .map((filename) => path.join(result.filePaths[0], filename));
   });
+  ipcMain.handle('dialog:select-perspective-excel-file', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getSpreadsheetImportFilters() });
+    return result.canceled ? null : result.filePaths[0];
+  });
   ipcMain.handle('shell:show-item-in-folder', (_event, filePath) => {
     shell.showItemInFolder(filePath);
     return true;
@@ -172,6 +183,7 @@ module.exports = {
   getBackendWorkingDirectory,
   getDocumentImportFilters,
   getImageImportFilters,
+  getSpreadsheetImportFilters,
   getPythonExecutable,
   startBackend,
   stopBackend

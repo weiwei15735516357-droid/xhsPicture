@@ -9,6 +9,8 @@ const state = {
   selectedLayoutIndex: 0,
   perspectiveScenePath: null,
   perspectiveOverlayPaths: [],
+  perspectiveExcelPath: null,
+  perspectiveMode: 'excel',
   perspectivePoints: [
     { x: 0.18, y: 0.24 },
     { x: 0.82, y: 0.24 },
@@ -332,7 +334,7 @@ function renderPerspectiveCanvas() {
   const canvas = document.getElementById('perspective-canvas');
   canvas.innerHTML = '';
   if (!state.perspectiveScenePath) {
-    canvas.innerHTML = '<div class="empty">选择场景图后，在预览上拖动四个角定位叠图区域</div>';
+    canvas.innerHTML = '<div class="empty">选择底图后可预览；图片叠图模式可拖动四个角定位</div>';
     updatePerspectiveSummary();
     return;
   }
@@ -340,6 +342,10 @@ function renderPerspectiveCanvas() {
   image.className = 'perspective-scene';
   image.src = fileUrl(state.perspectiveScenePath);
   canvas.appendChild(image);
+  if (state.perspectiveMode === 'excel') {
+    updatePerspectiveSummary();
+    return;
+  }
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
   polygon.setAttribute('fill', 'rgba(217,48,37,0.18)');
@@ -362,8 +368,23 @@ function renderPerspectiveCanvas() {
 }
 
 function updatePerspectiveSummary() {
-  const scene = state.perspectiveScenePath ? '已选择场景图' : '未选择场景图';
+  const scene = state.perspectiveScenePath ? '已选择底图' : '未选择底图';
+  if (state.perspectiveMode === 'excel') {
+    const excel = state.perspectiveExcelPath ? '已选择 Excel' : '未选择 Excel';
+    setText('perspective-summary', `${scene}，${excel}。按商品id命名输出 1080×1440。`);
+    return;
+  }
   setText('perspective-summary', `${scene}，叠图 ${state.perspectiveOverlayPaths.length} 张。输出固定 1080×1440。`);
+}
+
+function syncPerspectiveMode() {
+  document.querySelectorAll('.perspective-image-control').forEach((item) => {
+    item.classList.toggle('hidden-panel', state.perspectiveMode !== 'image');
+  });
+  document.querySelectorAll('.perspective-excel-control').forEach((item) => {
+    item.classList.toggle('hidden-panel', state.perspectiveMode !== 'excel');
+  });
+  renderPerspectiveCanvas();
 }
 
 function startPerspectiveDrag(event, index) {
@@ -566,10 +587,14 @@ async function runPerspectiveCompose() {
     return;
   }
   if (!state.perspectiveScenePath) {
-    appendLog('请先选择场景图。');
+    appendLog('请先选择底图。');
     return;
   }
-  if (state.perspectiveOverlayPaths.length === 0) {
+  if (state.perspectiveMode === 'excel' && !state.perspectiveExcelPath) {
+    appendLog('请先选择 Excel 表格。');
+    return;
+  }
+  if (state.perspectiveMode === 'image' && state.perspectiveOverlayPaths.length === 0) {
     appendLog('请先选择叠图。');
     return;
   }
@@ -588,7 +613,9 @@ async function runPerspectiveCompose() {
       body: JSON.stringify({
         project_dir: state.projectDir,
         scene_path: state.perspectiveScenePath,
+        mode: state.perspectiveMode,
         overlay_paths: state.perspectiveOverlayPaths,
+        excel_path: state.perspectiveExcelPath,
         points: state.perspectivePoints,
         opacity: Number(document.getElementById('perspective-opacity').value),
         shadow: document.getElementById('perspective-shadow').checked
@@ -662,6 +689,12 @@ document.getElementById('clear-background-btn').addEventListener('click', () => 
   renderProject();
   appendLog('已删除底图，导出时使用浅灰背景。');
 });
+document.querySelectorAll('input[name="perspective-mode"]').forEach((input) => {
+  input.addEventListener('change', (event) => {
+    state.perspectiveMode = event.target.value;
+    syncPerspectiveMode();
+  });
+});
 document.getElementById('perspective-scene-btn').addEventListener('click', () => runAction(async () => {
   const selected = await window.xhsApp.selectPerspectiveSceneImage();
   if (!selected) {
@@ -669,6 +702,14 @@ document.getElementById('perspective-scene-btn').addEventListener('click', () =>
   }
   state.perspectiveScenePath = selected;
   renderPerspectiveCanvas();
+}));
+document.getElementById('perspective-excel-btn').addEventListener('click', () => runAction(async () => {
+  const selected = await window.xhsApp.selectPerspectiveExcelFile();
+  if (!selected) {
+    return;
+  }
+  state.perspectiveExcelPath = selected;
+  updatePerspectiveSummary();
 }));
 document.getElementById('perspective-overlays-btn').addEventListener('click', () => runAction(async () => {
   const selected = await window.xhsApp.selectPerspectiveOverlayFiles();
@@ -743,6 +784,7 @@ document.getElementById('start-export-btn').addEventListener('click', runExportA
 
 renderProject();
 setupNavigation();
+syncPerspectiveMode();
 renderPerspectiveCanvas();
 syncAspectGuardControl();
 syncSummaryControls();

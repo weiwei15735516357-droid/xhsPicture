@@ -10,7 +10,6 @@
     <aside class="sidebar">
       <div class="brand">小红书图片工作台</div>
       <button class="nav active" data-view="workbench" data-title="工作台" data-desc="本地项目和最近任务状态。">工作台</button>
-      <button class="nav" data-view="document" data-title="文档转图" data-desc="PPT/Word/PDF 转小红书 3:4 图片。">文档转图</button>
       <button class="nav" data-view="perspective" data-title="透视合成" data-desc="批量制作 3:4 小红书场景合成图。">透视合成</button>
       <button class="nav" data-view="tasks" data-title="导出任务" data-desc="查看当前任务进度和运行日志。">导出任务</button>
       <button class="nav" data-view="feishu" data-title="飞书上传" data-desc="随机抽图上传到飞书多维表格。">飞书上传</button>
@@ -47,7 +46,7 @@
           <p id="import-summary" class="muted">支持 JPG、PNG、WEBP、BMP、GIF、TIFF、JFIF。</p>
         </article>
 
-        <article class="panel view-panel hidden-view" data-view="document">
+        <article class="panel view-panel" data-view="workbench">
           <h2>PPT/Word/PDF 转 PNG</h2>
           <div class="field-row">
             <label for="pdf-scale">倍率</label>
@@ -126,26 +125,31 @@
 
         <article class="panel perspective-panel view-panel hidden-view" data-view="perspective">
           <h2>批量透视合成</h2>
+          <div class="mode-tabs">
+            <label><input name="perspective-mode" type="radio" value="excel" checked /> Excel文字叠图</label>
+            <label><input name="perspective-mode" type="radio" value="image" /> 图片叠图</label>
+          </div>
           <div class="button-row export-actions">
-            <button id="perspective-scene-btn">选择场景图</button>
-            <button id="perspective-overlays-btn">选择叠图</button>
-            <button id="perspective-overlay-folder-btn">选择叠图文件夹</button>
+            <button id="perspective-scene-btn">选择底图</button>
+            <button id="perspective-excel-btn" class="perspective-excel-control">选择 Excel 表格</button>
+            <button id="perspective-overlays-btn" class="perspective-image-control hidden-panel">选择叠图</button>
+            <button id="perspective-overlay-folder-btn" class="perspective-image-control hidden-panel">选择叠图文件夹</button>
           </div>
           <p id="perspective-summary" class="muted">输出固定为 1080×1440，适合小红书 3:4 图片。</p>
           <div id="perspective-canvas" class="perspective-canvas">
-            <div class="empty">选择场景图后，在预览上拖动四个角定位叠图区域</div>
+            <div class="empty">选择底图后可预览；图片叠图模式可拖动四个角定位</div>
           </div>
-          <div class="field-row">
+          <div class="field-row perspective-image-control hidden-panel">
             <label for="perspective-opacity">透明度</label>
             <input id="perspective-opacity" type="range" min="0.1" max="1" step="0.05" value="1" />
           </div>
-          <label class="checkbox-row">
+          <label class="checkbox-row perspective-image-control hidden-panel">
             <input id="perspective-shadow" type="checkbox" checked />
             添加柔和阴影
           </label>
           <div class="button-row export-actions">
-            <button id="perspective-reset-btn">重置四角</button>
-            <button id="perspective-start-btn">开始批量合成</button>
+            <button id="perspective-reset-btn" class="perspective-image-control hidden-panel">重置四角</button>
+            <button id="perspective-start-btn">开始生成</button>
           </div>
         </article>
 

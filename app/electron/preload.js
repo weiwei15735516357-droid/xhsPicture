@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('xhsApp', {
   selectPerspectiveSceneImage: () => ipcRenderer.invoke('dialog:select-perspective-scene-image'),
   selectPerspectiveOverlayFiles: () => ipcRenderer.invoke('dialog:select-perspective-overlay-files'),
   selectPerspectiveOverlayFolder: () => ipcRenderer.invoke('dialog:select-perspective-overlay-folder'),
+  selectPerspectiveExcelFile: () => ipcRenderer.invoke('dialog:select-perspective-excel-file'),
   showItemInFolder: (filePath) => ipcRenderer.invoke('shell:show-item-in-folder', filePath)
 });

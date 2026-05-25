@@ -110,17 +110,27 @@ def create_app() -> FastAPI:
 
         def run_compose() -> None:
             try:
-                result = PerspectiveComposer().compose_batch(
-                    project_dir=Path(request.project_dir),
-                    scene_path=Path(request.scene_path),
-                    overlay_paths=[Path(item) for item in request.overlay_paths],
-                    points=[point.model_dump() for point in request.points],
-                    opacity=request.opacity,
-                    shadow=request.shadow,
-                    progress_callback=lambda current, total, message: task_store.update_progress(
-                        task["id"], current, total, message
-                    ),
-                )
+                composer = PerspectiveComposer()
+                progress = lambda current, total, message: task_store.update_progress(task["id"], current, total, message)
+                if request.mode == "excel":
+                    if not request.excel_path:
+                        raise ValueError("请选择 Excel 表格")
+                    result = composer.compose_text_batch(
+                        project_dir=Path(request.project_dir),
+                        scene_path=Path(request.scene_path),
+                        excel_path=Path(request.excel_path),
+                        progress_callback=progress,
+                    )
+                else:
+                    result = composer.compose_batch(
+                        project_dir=Path(request.project_dir),
+                        scene_path=Path(request.scene_path),
+                        overlay_paths=[Path(item) for item in request.overlay_paths],
+                        points=[point.model_dump() for point in request.points],
+                        opacity=request.opacity,
+                        shadow=request.shadow,
+                        progress_callback=progress,
+                    )
                 task_store.complete(task["id"], result)
             except Exception as exc:
                 task_store.fail(task["id"], str(exc))

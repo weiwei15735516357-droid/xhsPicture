@@ -141,6 +141,18 @@ h2 {
   margin-top: 14px;
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.mode-tabs label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 button,
 select,
 input {
