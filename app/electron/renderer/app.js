@@ -439,15 +439,15 @@ function createExcelPreviewCard(row, index) {
   form.className = 'excel-card-form';
   const options = getRowTextOptions(row);
   form.innerHTML = `
-    <label>??ID<input data-field="product_id" value="${escapeHtml(row.product_id)}" /></label>
-    <label class="wide">??<textarea data-field="title">${escapeHtml(row.title)}</textarea></label>
-    <label>??<input data-style="fontSize" type="number" min="16" max="220" value="${options.fontSize}" /></label>
+    <label>&#21830;&#21697;ID<input data-field="product_id" value="${escapeHtml(row.product_id)}" /></label>
+    <label class="wide">&#26631;&#39064;<textarea data-field="title">${escapeHtml(row.title)}</textarea></label>
+    <label>&#23383;&#21495;<input data-style="fontSize" type="number" min="16" max="220" value="${options.fontSize}" /></label>
     <label>X<input data-style="x" type="number" min="0" max="1080" value="${options.x}" /></label>
     <label>Y<input data-style="y" type="number" min="0" max="1440" value="${options.y}" /></label>
-    <label>\u6587\u5b57\u8272<input data-style="color" type="color" value="${options.color}" /></label>
-    <label>\u63cf\u8fb9\u8272<input data-style="strokeColor" type="color" value="${options.strokeColor}" /></label>
-    <label>??<input data-style="strokeWidth" type="number" min="0" max="16" value="${options.strokeWidth}" /></label>
-    <label class="inline"><input data-style="bold" type="checkbox" ${options.bold ? 'checked' : ''} /> ??</label>
+    <label>&#25991;&#23383;&#33394;<input data-style="color" type="color" value="${options.color}" /></label>
+    <label>&#25551;&#36793;&#33394;<input data-style="strokeColor" type="color" value="${options.strokeColor}" /></label>
+    <label>&#25551;&#36793;<input data-style="strokeWidth" type="number" min="0" max="16" value="${options.strokeWidth}" /></label>
+    <label class="inline"><input data-style="bold" type="checkbox" ${options.bold ? 'checked' : ''} /> &#21152;&#31895;</label>
   `;
   card.addEventListener('click', () => {
     state.perspectivePreviewIndex = index;
@@ -527,9 +527,9 @@ function renderPerspectiveCanvas() {
 }
 
 function updatePerspectiveSummary() {
-  const scene = state.perspectiveScenePath ? '已选择底图' : '未选择底图';
+  const scene = state.perspectiveScenePath ? '\u5df2\u9009\u62e9\u5e95\u56fe' : '\u672a\u9009\u62e9\u5e95\u56fe';
   if (state.perspectiveMode === 'excel') {
-    const excel = state.perspectiveExcelPath ? '已选择 Excel' : '未选择 Excel';
+    const excel = state.perspectiveExcelPath ? '\u5df2\u9009\u62e9 Excel' : '\u672a\u9009\u62e9 Excel';
     const rows = state.perspectiveRows.length ? `，已读取 ${state.perspectiveRows.length} 条标题` : '';
     setText('perspective-summary', `${scene}，${excel}${rows}。按商品id命名输出 1080x1440。`);
     return;
@@ -538,6 +538,11 @@ function updatePerspectiveSummary() {
 }
 
 function syncPerspectiveMode() {
+  const panel = document.querySelector('.perspective-panel');
+  if (panel) {
+    panel.classList.toggle('excel-mode', state.perspectiveMode === 'excel');
+    panel.classList.toggle('image-mode', state.perspectiveMode === 'image');
+  }
   document.querySelectorAll('.perspective-image-control').forEach((item) => {
     item.classList.toggle('hidden-panel', state.perspectiveMode !== 'image');
   });
