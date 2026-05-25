@@ -167,12 +167,13 @@ input {
 
 .tool-grid {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr) minmax(260px, 0.7fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   margin-bottom: 14px;
 }
 
-.hidden-panel {
+.hidden-panel,
+.hidden-view {
   display: none;
 }
 

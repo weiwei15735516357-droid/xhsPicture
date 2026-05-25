@@ -30,6 +30,25 @@ function setText(id, text) {
   document.getElementById(id).textContent = text;
 }
 
+function setupNavigation() {
+  const navButtons = document.querySelectorAll('.nav[data-view]');
+  const panels = document.querySelectorAll('.view-panel');
+  const activate = (button) => {
+    const view = button.dataset.view;
+    navButtons.forEach((item) => item.classList.toggle('active', item === button));
+    panels.forEach((panel) => {
+      const views = panel.dataset.view.split(/\s+/);
+      panel.classList.toggle('hidden-view', !views.includes(view));
+    });
+    setText('view-title', button.dataset.title);
+    setText('view-desc', button.dataset.desc);
+  };
+  navButtons.forEach((button) => {
+    button.addEventListener('click', () => activate(button));
+  });
+  activate(document.querySelector('.nav.active[data-view]') || navButtons[0]);
+}
+
 function appendLog(message) {
   const log = document.getElementById('activity-log');
   const time = new Date().toLocaleTimeString();
@@ -723,6 +742,7 @@ document.getElementById('select-document-btn').addEventListener('click', () => r
 document.getElementById('start-export-btn').addEventListener('click', runExportAction);
 
 renderProject();
+setupNavigation();
 renderPerspectiveCanvas();
 syncAspectGuardControl();
 syncSummaryControls();

@@ -9,19 +9,19 @@
   <body>
     <aside class="sidebar">
       <div class="brand">小红书图片工作台</div>
-      <button class="nav active">工作台</button>
-      <button class="nav">文档转图</button>
-      <button class="nav">透视合成</button>
-      <button class="nav">导出任务</button>
-      <button class="nav">飞书上传</button>
-      <button class="nav">设置</button>
+      <button class="nav active" data-view="workbench" data-title="工作台" data-desc="本地项目和最近任务状态。">工作台</button>
+      <button class="nav" data-view="document" data-title="文档转图" data-desc="PPT/Word/PDF 转小红书 3:4 图片。">文档转图</button>
+      <button class="nav" data-view="perspective" data-title="透视合成" data-desc="批量制作 3:4 小红书场景合成图。">透视合成</button>
+      <button class="nav" data-view="tasks" data-title="导出任务" data-desc="查看当前任务进度和运行日志。">导出任务</button>
+      <button class="nav" data-view="feishu" data-title="飞书上传" data-desc="随机抽图上传到飞书多维表格。">飞书上传</button>
+      <button class="nav" data-view="settings" data-title="设置" data-desc="本地工具配置。">设置</button>
     </aside>
 
     <main class="workspace">
       <section class="topbar">
         <div>
-          <h1>工作台</h1>
-          <p>本地项目、文档转图、批量透视合成。</p>
+          <h1 id="view-title">工作台</h1>
+          <p id="view-desc">本地项目和最近任务状态。</p>
         </div>
         <div id="backend-status" class="status">后端检测中</div>
       </section>
@@ -47,7 +47,7 @@
           <p id="import-summary" class="muted">支持 JPG、PNG、WEBP、BMP、GIF、TIFF、JFIF。</p>
         </article>
 
-        <article class="panel">
+        <article class="panel view-panel hidden-view" data-view="document">
           <h2>PPT/Word/PDF 转 PNG</h2>
           <div class="field-row">
             <label for="pdf-scale">倍率</label>
@@ -124,7 +124,7 @@
           </details>
         </article>
 
-        <article class="panel perspective-panel">
+        <article class="panel perspective-panel view-panel hidden-view" data-view="perspective">
           <h2>批量透视合成</h2>
           <div class="button-row export-actions">
             <button id="perspective-scene-btn">选择场景图</button>
@@ -149,7 +149,7 @@
           </div>
         </article>
 
-        <article class="panel">
+        <article class="panel view-panel" data-view="workbench tasks">
           <h2>任务状态</h2>
           <p id="task-summary">暂无任务</p>
           <div class="progress-wrap">
@@ -162,6 +162,16 @@
             </div>
           </div>
           <pre id="activity-log"></pre>
+        </article>
+
+        <article class="panel view-panel hidden-view" data-view="feishu">
+          <h2>飞书上传</h2>
+          <p class="muted">飞书表格建好后，再在这里填写 App ID、表格信息、行范围和附件字段。</p>
+        </article>
+
+        <article class="panel view-panel hidden-view" data-view="settings">
+          <h2>设置</h2>
+          <p class="muted">当前版本优先使用本机默认配置，后续在这里集中管理默认目录和飞书配置。</p>
         </article>
       </section>
 
