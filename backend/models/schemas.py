@@ -64,6 +64,7 @@ class TextOverlayOptions(BaseModel):
     x: int = Field(default=118, ge=0, le=1080)
     y: int = Field(default=386, ge=0, le=1440)
     font_size: int = Field(default=92, ge=16, le=220)
+    font_family: str = "msyh"
     color: str = "#000000"
     stroke_color: str = "#ffffff"
     stroke_width: int = Field(default=0, ge=0, le=16)

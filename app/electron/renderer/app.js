@@ -17,6 +17,7 @@ const state = {
     x: 118,
     y: 386,
     fontSize: 92,
+    fontFamily: 'msyh',
     color: '#000000',
     strokeColor: '#ffffff',
     strokeWidth: 0,
@@ -352,6 +353,7 @@ function cloneTextOptions(options = state.perspectiveText) {
     x: Number(options.x ?? 118),
     y: Number(options.y ?? 386),
     fontSize: Number(options.fontSize ?? options.font_size ?? 92),
+    fontFamily: options.fontFamily || options.font_family || 'msyh',
     color: options.color || '#000000',
     strokeColor: options.strokeColor || options.stroke_color || '#ffffff',
     strokeWidth: Number(options.strokeWidth ?? options.stroke_width ?? 0),
@@ -369,6 +371,7 @@ function toBackendTextOptions(options) {
     x: Number(options.x),
     y: Number(options.y),
     font_size: Number(options.fontSize),
+    font_family: options.fontFamily,
     color: options.color,
     stroke_color: options.strokeColor,
     stroke_width: Number(options.strokeWidth),
@@ -378,7 +381,50 @@ function toBackendTextOptions(options) {
 
 function updateExcelPreviewPanel() {
   const counter = document.getElementById('excel-preview-counter');
-  if (counter) { counter.textContent = state.perspectiveRows.length ? `${state.perspectiveRows.length} ?` : '0 ?'; }
+  if (counter) { counter.textContent = state.perspectiveRows.length ? `${state.perspectiveRows.length} 条` : '0 条'; }
+}
+
+function ensureDefaultStylePanel(list) {
+  const panel = document.querySelector('.excel-preview-panel');
+  if (!panel || document.getElementById('excel-default-style')) {
+    return;
+  }
+  const options = cloneTextOptions();
+  const stylePanel = document.createElement('div');
+  stylePanel.id = 'excel-default-style';
+  stylePanel.className = 'excel-default-style';
+  stylePanel.innerHTML = `
+    <strong>&#32479;&#19968;&#40664;&#35748;&#26679;&#24335;</strong>
+    <label>&#23383;&#20307;<select data-default-style="fontFamily">${fontFamilyOptions(options.fontFamily)}</select></label>
+    <label>&#23383;&#21495;<input data-default-style="fontSize" type="number" min="16" max="220" value="${options.fontSize}" /></label>
+    <label>X<input data-default-style="x" type="number" min="0" max="1080" value="${options.x}" /></label>
+    <label>Y<input data-default-style="y" type="number" min="0" max="1440" value="${options.y}" /></label>
+    <label>&#25991;&#23383;&#33394;<input data-default-style="color" type="color" value="${options.color}" /></label>
+    <label>&#25551;&#36793;&#33394;<input data-default-style="strokeColor" type="color" value="${options.strokeColor}" /></label>
+    <label>&#25551;&#36793;<input data-default-style="strokeWidth" type="number" min="0" max="16" value="${options.strokeWidth}" /></label>
+    <label class="inline"><input data-default-style="bold" type="checkbox" ${options.bold ? 'checked' : ''} /> &#21152;&#31895;</label>
+    <button id="apply-default-style-btn">&#24212;&#29992;&#21040;&#20840;&#37096;</button>
+  `;
+  stylePanel.addEventListener('input', (event) => {
+    const target = event.target;
+    const key = target.dataset.defaultStyle;
+    if (!key) { return; }
+    state.perspectiveText[key] = target.type === 'checkbox'
+      ? target.checked
+      : target.type === 'number'
+        ? Number(target.value)
+        : target.value;
+  });
+  stylePanel.querySelector('#apply-default-style-btn').addEventListener('click', () => {
+    const optionsToApply = cloneTextOptions();
+    state.perspectiveRows.forEach((row) => {
+      row.textOptions = cloneTextOptions(optionsToApply);
+    });
+    renderPerspectiveCanvas();
+    renderExcelPreviewList();
+    appendLog('已将统一默认样式应用到全部商品预览。');
+  });
+  panel.insertBefore(stylePanel, list);
 }
 
 function ensureExcelPreviewList() {
@@ -389,6 +435,7 @@ function ensureExcelPreviewList() {
     panel.innerHTML = '<div class="preview-nav"><strong>\u5168\u90e8\u5546\u54c1\u9884\u89c8</strong><span id="excel-preview-counter">0 \u6761</span></div><div id="excel-preview-list" class="excel-preview-list"></div>';
     list = document.getElementById('excel-preview-list');
   }
+  ensureDefaultStylePanel(list);
   return list;
 }
 
@@ -402,6 +449,7 @@ function applyTextOverlayStyle(overlay, preview, row) {
   overlay.style.fontSize = `${Math.max(8, (options.fontSize / 1440) * rect.height)}px`;
   overlay.style.color = options.color;
   overlay.style.fontWeight = options.bold ? '800' : '500';
+  overlay.style.fontFamily = fontFamilyCss(options.fontFamily);
   if (Number(options.strokeWidth) > 0) {
     const width = Math.max(1, Math.round((options.strokeWidth / 1440) * rect.height));
     overlay.style.webkitTextStroke = `${width}px ${options.strokeColor}`;
@@ -410,6 +458,30 @@ function applyTextOverlayStyle(overlay, preview, row) {
     overlay.style.webkitTextStroke = '';
     overlay.style.paintOrder = '';
   }
+}
+
+function fontFamilyCss(fontFamily) {
+  const families = {
+    msyh: '"Microsoft YaHei", sans-serif',
+    simhei: 'SimHei, "Microsoft YaHei", sans-serif',
+    simsun: 'SimSun, serif',
+    kaiti: 'KaiTi, STKaiti, serif',
+    dengxian: 'DengXian, "Microsoft YaHei", sans-serif'
+  };
+  return families[fontFamily] || families.msyh;
+}
+
+function fontFamilyOptions(selected) {
+  const options = [
+    ['msyh', '&#24494;&#36719;&#38597;&#40657;'],
+    ['simhei', '&#40657;&#20307;'],
+    ['simsun', '&#23435;&#20307;'],
+    ['kaiti', '&#26999;&#20307;'],
+    ['dengxian', '&#31561;&#32447;']
+  ];
+  return options
+    .map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`)
+    .join('');
 }
 
 function createTextPreview(row, className = 'excel-card-preview') {
@@ -441,6 +513,7 @@ function createExcelPreviewCard(row, index) {
   form.innerHTML = `
     <label>&#21830;&#21697;ID<input data-field="product_id" value="${escapeHtml(row.product_id)}" /></label>
     <label class="wide">&#26631;&#39064;<textarea data-field="title">${escapeHtml(row.title)}</textarea></label>
+    <label>&#23383;&#20307;<select data-style="fontFamily">${fontFamilyOptions(options.fontFamily)}</select></label>
     <label>&#23383;&#21495;<input data-style="fontSize" type="number" min="16" max="220" value="${options.fontSize}" /></label>
     <label>X<input data-style="x" type="number" min="0" max="1080" value="${options.x}" /></label>
     <label>Y<input data-style="y" type="number" min="0" max="1440" value="${options.y}" /></label>

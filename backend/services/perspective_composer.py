@@ -104,7 +104,11 @@ class PerspectiveComposer:
         y = int(options.get("y", 386))
         font_size = int(options.get("font_size", 92))
         stroke_width = int(options.get("stroke_width", 0))
-        font = self._title_font(font_size=font_size, bold=bool(options.get("bold", True)))
+        font = self._title_font(
+            font_size=font_size,
+            bold=bool(options.get("bold", True)),
+            font_family=str(options.get("font_family", "msyh")),
+        )
         lines = self._wrap_text(title, font, max(80, XHS_WIDTH - x - 54))
         line_height = int(font_size * 1.25)
         fill = self._hex_to_rgba(str(options.get("color", "#000000")))
@@ -183,11 +187,23 @@ class PerspectiveComposer:
                 return str(value).strip()
         return ""
 
-    def _title_font(self, font_size: int = 56, bold: bool = True) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    def _title_font(
+        self,
+        font_size: int = 56,
+        bold: bool = True,
+        font_family: str = "msyh",
+    ) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        font_map = {
+            "msyh": [Path("C:/Windows/Fonts/msyhbd.ttc") if bold else Path("C:/Windows/Fonts/msyh.ttc")],
+            "simhei": [Path("C:/Windows/Fonts/simhei.ttf")],
+            "simsun": [Path("C:/Windows/Fonts/simsun.ttc")],
+            "kaiti": [Path("C:/Windows/Fonts/simkai.ttf")],
+            "dengxian": [Path("C:/Windows/Fonts/Dengb.ttf") if bold else Path("C:/Windows/Fonts/Deng.ttf")],
+        }
         candidates = []
-        if bold:
-            candidates.append(Path("C:/Windows/Fonts/msyhbd.ttc"))
+        candidates.extend(font_map.get(font_family, []))
         candidates.extend([
+            Path("C:/Windows/Fonts/msyhbd.ttc") if bold else Path("C:/Windows/Fonts/msyh.ttc"),
             Path("C:/Windows/Fonts/msyh.ttc"),
             Path("C:/Windows/Fonts/simhei.ttf"),
         ])

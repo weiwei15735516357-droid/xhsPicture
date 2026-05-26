@@ -164,6 +164,17 @@ input {
   font: inherit;
 }
 
+.excel-card-form select,
+.excel-default-style select {
+  height: 36px;
+  border: 1px solid #cbd2d9;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2933;
+  font: inherit;
+  padding: 0 10px;
+}
+
 button {
   padding: 0 14px;
 }
@@ -408,7 +419,7 @@ textarea {
   border: 1px solid #e1e5ea;
   border-radius: 6px;
   background: #fbfcfe;
-  max-height: calc(100vh - 250px);
+  max-height: calc(100vh - 238px);
   overflow: auto;
 }
 
@@ -429,15 +440,15 @@ textarea {
 
 .excel-preview-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
 }
 
 .excel-preview-card {
   display: grid;
-  grid-template-columns: minmax(360px, 58%) minmax(280px, 1fr);
-  gap: 14px;
-  padding: 12px;
+  grid-template-columns: 240px minmax(360px, 1fr);
+  gap: 12px;
+  padding: 10px;
   border: 1px solid #d9dee7;
   border-radius: 8px;
   background: #ffffff;
@@ -460,8 +471,8 @@ textarea {
 
 .excel-card-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(92px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(86px, 1fr));
+  gap: 8px;
   align-content: start;
 }
 
@@ -483,7 +494,7 @@ textarea {
 }
 
 .excel-card-form textarea {
-  min-height: 58px;
+  min-height: 48px;
 }
 
 .excel-card-form input[type="checkbox"] {
@@ -495,6 +506,41 @@ textarea {
   .excel-preview-card {
     grid-template-columns: minmax(280px, 1fr);
   }
+}
+
+.excel-default-style {
+  display: grid;
+  grid-template-columns: 120px repeat(8, minmax(74px, 1fr));
+  align-items: end;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.excel-default-style strong {
+  align-self: center;
+}
+
+.excel-default-style label {
+  display: grid;
+  gap: 5px;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.excel-default-style .inline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.excel-default-style input,
+.excel-default-style select,
+.excel-default-style button {
+  width: 100%;
 }
 
 .text-control-grid {

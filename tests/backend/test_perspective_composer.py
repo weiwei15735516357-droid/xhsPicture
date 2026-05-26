@@ -134,7 +134,7 @@ def test_perspective_text_batch_accepts_per_row_text_options(tmp_path: Path):
             {
                 "product_id": "SKU001",
                 "title": "Short title",
-                "text_options": {"x": 80, "y": 180, "font_size": 64, "bold": False},
+                "text_options": {"x": 80, "y": 180, "font_size": 64, "font_family": "simhei", "bold": False},
             },
             {
                 "product_id": "SKU002",
