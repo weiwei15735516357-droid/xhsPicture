@@ -9,6 +9,7 @@ const state = {
   selectedLayoutIndex: 0,
   perspectiveScenePath: null,
   perspectiveOverlayPaths: [],
+  perspectiveOverlayItems: [],
   perspectiveExcelPath: null,
   perspectiveRows: [],
   perspectivePreviewIndex: 0,
@@ -30,6 +31,11 @@ const state = {
     { x: 0.82, y: 0.70 },
     { x: 0.18, y: 0.70 }
   ],
+  perspectiveImageDefaults: {
+    opacity: 1,
+    shadow: true,
+    previewWidth: 320
+  },
   perspectiveInProgress: false,
   exportInProgress: false,
   aspectGuard: localStorage.getItem('xhs.layoutAspectGuard') !== 'false'
@@ -337,6 +343,16 @@ function renderLayoutCanvas(canvasId, layout, type) {
 }
 
 function resetPerspectivePoints() {
+  const item = currentPerspectiveOverlayItem();
+  const points = [
+    { x: 0.18, y: 0.24 },
+    { x: 0.82, y: 0.24 },
+    { x: 0.82, y: 0.70 },
+    { x: 0.18, y: 0.70 }
+  ];
+  if (item) {
+    item.points = clonePerspectivePoints(points);
+  }
   state.perspectivePoints = [
     { x: 0.18, y: 0.24 },
     { x: 0.82, y: 0.24 },
@@ -354,9 +370,42 @@ function currentPerspectiveRow() {
 }
 
 function currentPerspectiveOverlayPath() {
-  if (!state.perspectiveOverlayPaths.length) { return null; }
-  const index = Math.max(0, Math.min(state.perspectiveOverlayIndex, state.perspectiveOverlayPaths.length - 1));
-  return state.perspectiveOverlayPaths[index];
+  const item = currentPerspectiveOverlayItem();
+  return item ? item.path : null;
+}
+
+function clonePerspectivePoints(points = state.perspectivePoints) {
+  return points.map((point) => ({ x: Number(point.x), y: Number(point.y) }));
+}
+
+function createPerspectiveOverlayItems(paths) {
+  return paths.map((path) => ({
+    path,
+    points: clonePerspectivePoints(),
+    opacity: Number(state.perspectiveImageDefaults.opacity),
+    shadow: Boolean(state.perspectiveImageDefaults.shadow)
+  }));
+}
+
+function currentPerspectiveOverlayItem() {
+  if (!state.perspectiveOverlayItems.length) { return null; }
+  const index = Math.max(0, Math.min(state.perspectiveOverlayIndex, state.perspectiveOverlayItems.length - 1));
+  return state.perspectiveOverlayItems[index];
+}
+
+function currentPerspectivePoints() {
+  const item = currentPerspectiveOverlayItem();
+  return item ? item.points : state.perspectivePoints;
+}
+
+function currentPerspectiveOpacity() {
+  const item = currentPerspectiveOverlayItem();
+  return item ? item.opacity : Number(state.perspectiveImageDefaults.opacity);
+}
+
+function currentPerspectiveShadow() {
+  const item = currentPerspectiveOverlayItem();
+  return item ? item.shadow : Boolean(state.perspectiveImageDefaults.shadow);
 }
 
 function cloneTextOptions(options = state.perspectiveText) {
@@ -568,6 +617,12 @@ function renderExcelPreviewList() {
 }
 
 function createImagePreviewCard(overlayPath, index) {
+  const item = state.perspectiveOverlayItems[index] || {
+    path: overlayPath,
+    points: clonePerspectivePoints(),
+    opacity: Number(state.perspectiveImageDefaults.opacity),
+    shadow: Boolean(state.perspectiveImageDefaults.shadow)
+  };
   const card = document.createElement('div');
   card.className = 'excel-preview-card image-preview-card';
   if (index === state.perspectiveOverlayIndex) { card.classList.add('selected'); }
@@ -581,14 +636,15 @@ function createImagePreviewCard(overlayPath, index) {
   } else {
     preview.innerHTML = '<div class="empty">\u5148\u9009\u62e9\u5e95\u56fe</div>';
   }
-  preview.appendChild(createPerspectiveOverlayImage(overlayPath));
+  preview.appendChild(createPerspectiveOverlayImage(overlayPath, item));
   const form = document.createElement('div');
   form.className = 'excel-card-form image-card-form';
   const filename = overlayPath.split(/[\\/]/).pop();
   form.innerHTML = `
     <label class="wide">&#21472;&#22270;&#25991;&#20214;<input value="${escapeHtml(filename)}" readonly /></label>
     <label>&#24207;&#21495;<input value="${index + 1}" readonly /></label>
-    <label>&#36879;&#26126;&#24230;<input value="${document.getElementById('perspective-opacity')?.value || 1}" readonly /></label>
+    <label>&#36879;&#26126;&#24230;<input data-image-style="opacity" type="number" min="0.1" max="1" step="0.05" value="${item.opacity}" /></label>
+    <label class="inline"><input data-image-style="shadow" type="checkbox" ${item.shadow ? 'checked' : ''} /> &#38452;&#24433;</label>
     <label class="wide">&#36755;&#20986;&#21517;<input value="${escapeHtml(filename.replace(/\.[^.]+$/, ''))}_&#36879;&#35270;&#21512;&#25104;" readonly /></label>
   `;
   card.addEventListener('click', () => {
@@ -596,6 +652,19 @@ function createImagePreviewCard(overlayPath, index) {
     document.querySelectorAll('.image-preview-card').forEach((item) => item.classList.remove('selected'));
     card.classList.add('selected');
     renderPerspectiveCanvas();
+  });
+  form.addEventListener('input', (event) => {
+    const target = event.target;
+    const key = target.dataset.imageStyle;
+    if (!key) { return; }
+    item[key] = target.type === 'checkbox' ? target.checked : Number(target.value);
+    if (index === state.perspectiveOverlayIndex) {
+      renderPerspectiveCanvas();
+    }
+    const overlay = preview.querySelector('.perspective-overlay-preview');
+    if (overlay) {
+      applyPerspectiveOverlayGeometry(overlay, item);
+    }
   });
   card.appendChild(preview);
   card.appendChild(form);
@@ -606,28 +675,30 @@ function renderImagePreviewList() {
   const counter = document.getElementById('image-preview-counter');
   const list = document.getElementById('image-preview-list');
   if (!counter || !list) { return; }
-  counter.textContent = state.perspectiveOverlayPaths.length ? `${state.perspectiveOverlayPaths.length} \u5f20` : '0 \u5f20';
+  list.style.setProperty('--image-preview-width', `${state.perspectiveImageDefaults.previewWidth}px`);
+  counter.textContent = state.perspectiveOverlayItems.length ? `${state.perspectiveOverlayItems.length} \u5f20` : '0 \u5f20';
   list.innerHTML = '';
-  if (!state.perspectiveOverlayPaths.length) {
+  if (!state.perspectiveOverlayItems.length) {
     list.innerHTML = '<div class="empty">\u9009\u62e9\u5e95\u56fe\u548c\u53e0\u56fe\u540e\uff0c\u8fd9\u91cc\u4f1a\u5217\u51fa\u6bcf\u5f20\u56fe\u7684\u900f\u89c6\u5408\u6210\u9884\u89c8\u3002</div>';
     return;
   }
-  state.perspectiveOverlayPaths.forEach((overlayPath, index) => {
-    list.appendChild(createImagePreviewCard(overlayPath, index));
+  state.perspectiveOverlayItems.forEach((item, index) => {
+    list.appendChild(createImagePreviewCard(item.path, index));
   });
 }
 
-function createPerspectiveOverlayImage(overlayPath) {
+function createPerspectiveOverlayImage(overlayPath, item = currentPerspectiveOverlayItem()) {
   const overlay = document.createElement('img');
   overlay.className = 'perspective-overlay-preview';
   overlay.src = fileUrl(overlayPath);
-  applyPerspectiveOverlayGeometry(overlay);
+  applyPerspectiveOverlayGeometry(overlay, item);
   return overlay;
 }
 
-function applyPerspectiveOverlayGeometry(overlay) {
-  const xs = state.perspectivePoints.map((point) => point.x);
-  const ys = state.perspectivePoints.map((point) => point.y);
+function applyPerspectiveOverlayGeometry(overlay, item = currentPerspectiveOverlayItem()) {
+  const points = item ? item.points : state.perspectivePoints;
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
   const left = Math.min(...xs);
   const top = Math.min(...ys);
   const width = Math.max(0.01, Math.max(...xs) - left);
@@ -636,8 +707,8 @@ function applyPerspectiveOverlayGeometry(overlay) {
   overlay.style.top = `${top * 100}%`;
   overlay.style.width = `${width * 100}%`;
   overlay.style.height = `${height * 100}%`;
-  overlay.style.opacity = document.getElementById('perspective-opacity')?.value || 1;
-  overlay.style.clipPath = `polygon(${state.perspectivePoints.map((point) => `${((point.x - left) / width) * 100}% ${((point.y - top) / height) * 100}%`).join(', ')})`;
+  overlay.style.opacity = item ? item.opacity : Number(state.perspectiveImageDefaults.opacity);
+  overlay.style.clipPath = `polygon(${points.map((point) => `${((point.x - left) / width) * 100}% ${((point.y - top) / height) * 100}%`).join(', ')})`;
 }
 
 function renderPerspectiveCanvas() {
@@ -672,12 +743,12 @@ function renderPerspectiveCanvas() {
   polygon.setAttribute('fill', 'rgba(217,48,37,0.18)');
   polygon.setAttribute('stroke', '#d93025');
   polygon.setAttribute('stroke-width', '2');
-  polygon.setAttribute('points', state.perspectivePoints.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
+  polygon.setAttribute('points', currentPerspectivePoints().map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
   svg.setAttribute('viewBox', '0 0 100 100');
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.appendChild(polygon);
   canvas.appendChild(svg);
-  state.perspectivePoints.forEach((point, index) => {
+  currentPerspectivePoints().forEach((point, index) => {
     const handle = document.createElement('div');
     handle.className = 'perspective-handle';
     handle.style.left = `${point.x * 100}%`;
@@ -696,7 +767,7 @@ function updatePerspectiveSummary() {
     setText('perspective-summary', `${scene}，${excel}${rows}。按商品id命名输出 1080x1440。`);
     return;
   }
-  setText('perspective-summary', `${scene}，叠图 ${state.perspectiveOverlayPaths.length} 张。输出固定 1080x1440。`);
+  setText('perspective-summary', `${scene}，叠图 ${state.perspectiveOverlayItems.length || state.perspectiveOverlayPaths.length} 张。输出固定 1080x1440。`);
 }
 
 function syncPerspectiveMode() {
@@ -720,21 +791,22 @@ function startPerspectiveDrag(event, index) {
   event.preventDefault();
   const canvas = document.getElementById('perspective-canvas');
   const rect = canvas.getBoundingClientRect();
+  const points = currentPerspectivePoints();
   const target = event.currentTarget;
   target.setPointerCapture(event.pointerId);
   target.onpointermove = (moveEvent) => {
     const x = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (moveEvent.clientY - rect.top) / rect.height));
-    state.perspectivePoints[index] = { x, y };
+    points[index] = { x, y };
     target.style.left = `${x * 100}%`;
     target.style.top = `${y * 100}%`;
     const polygon = canvas.querySelector('polygon');
     if (polygon) {
-      polygon.setAttribute('points', state.perspectivePoints.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
+      polygon.setAttribute('points', points.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
     }
     const overlay = canvas.querySelector('.perspective-overlay-preview');
     if (overlay) {
-      applyPerspectiveOverlayGeometry(overlay);
+      applyPerspectiveOverlayGeometry(overlay, currentPerspectiveOverlayItem());
     }
   };
   target.onpointerup = target.onpointercancel = (endEvent) => {
@@ -992,10 +1064,16 @@ async function runPerspectiveCompose() {
         scene_path: state.perspectiveScenePath,
         mode: state.perspectiveMode,
         overlay_paths: state.perspectiveOverlayPaths,
+        overlay_items: state.perspectiveOverlayItems.map((item) => ({
+          path: item.path,
+          points: item.points,
+          opacity: Number(item.opacity),
+          shadow: Boolean(item.shadow)
+        })),
         excel_path: state.perspectiveExcelPath,
-        points: state.perspectivePoints,
-        opacity: Number(document.getElementById('perspective-opacity').value),
-        shadow: document.getElementById('perspective-shadow').checked,
+        points: currentPerspectivePoints(),
+        opacity: currentPerspectiveOpacity(),
+        shadow: currentPerspectiveShadow(),
         text_options: toBackendTextOptions(cloneTextOptions()),
         text_rows: state.perspectiveRows.map((row) => ({
           product_id: row.product_id,
@@ -1102,6 +1180,7 @@ document.getElementById('perspective-overlays-btn').addEventListener('click', ()
     return;
   }
   state.perspectiveOverlayPaths = selected;
+  state.perspectiveOverlayItems = createPerspectiveOverlayItems(selected);
   state.perspectiveOverlayIndex = 0;
   renderPerspectiveCanvas();
   renderImagePreviewList();
@@ -1113,6 +1192,7 @@ document.getElementById('perspective-overlay-folder-btn').addEventListener('clic
     return;
   }
   state.perspectiveOverlayPaths = selected;
+  state.perspectiveOverlayItems = createPerspectiveOverlayItems(selected);
   state.perspectiveOverlayIndex = 0;
   renderPerspectiveCanvas();
   renderImagePreviewList();
@@ -1121,6 +1201,33 @@ document.getElementById('perspective-overlay-folder-btn').addEventListener('clic
 document.getElementById('perspective-opacity').addEventListener('input', () => {
   renderPerspectiveCanvas();
   renderImagePreviewList();
+});
+document.getElementById('image-preview-size').addEventListener('input', (event) => {
+  state.perspectiveImageDefaults.previewWidth = Number(event.target.value);
+  renderImagePreviewList();
+});
+document.getElementById('image-default-opacity').addEventListener('input', (event) => {
+  state.perspectiveImageDefaults.opacity = Number(event.target.value);
+});
+document.getElementById('image-default-shadow').addEventListener('change', (event) => {
+  state.perspectiveImageDefaults.shadow = event.target.checked;
+});
+document.getElementById('image-apply-default-btn').addEventListener('click', () => {
+  state.perspectiveOverlayItems.forEach((item) => {
+    item.opacity = Number(state.perspectiveImageDefaults.opacity);
+    item.shadow = Boolean(state.perspectiveImageDefaults.shadow);
+  });
+  renderPerspectiveCanvas();
+  renderImagePreviewList();
+  appendLog('已将图片叠图统一默认样式应用到全部图片。');
+});
+document.getElementById('image-reset-points-btn').addEventListener('click', () => {
+  state.perspectiveOverlayItems.forEach((item) => {
+    item.points = clonePerspectivePoints();
+  });
+  renderPerspectiveCanvas();
+  renderImagePreviewList();
+  appendLog('已重置全部图片叠图四角位置。');
 });
 document.getElementById('perspective-reset-btn').addEventListener('click', resetPerspectivePoints);
 document.getElementById('perspective-start-btn').addEventListener('click', runPerspectiveCompose);

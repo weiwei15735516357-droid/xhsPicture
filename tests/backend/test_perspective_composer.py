@@ -77,6 +77,63 @@ def test_perspective_compose_start_api_reports_completed_task(tmp_path: Path):
     assert len(task["result"]["assets"]) == 1
 
 
+def test_perspective_compose_start_accepts_per_overlay_options(tmp_path: Path):
+    project_dir = tmp_path / "ProjectA"
+    ProjectService().create_project(project_dir)
+    scene_path = tmp_path / "scene.png"
+    overlay_a = tmp_path / "overlay_a.png"
+    overlay_b = tmp_path / "overlay_b.png"
+    Image.new("RGB", (900, 1200), (240, 240, 240)).save(scene_path)
+    Image.new("RGB", (400, 300), (180, 20, 20)).save(overlay_a)
+    Image.new("RGB", (400, 300), (20, 40, 180)).save(overlay_b)
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/perspective/compose/start",
+        json={
+            "project_dir": str(project_dir),
+            "scene_path": str(scene_path),
+            "mode": "image",
+            "overlay_items": [
+                {
+                    "path": str(overlay_a),
+                    "points": [
+                        {"x": 0.10, "y": 0.10},
+                        {"x": 0.50, "y": 0.10},
+                        {"x": 0.50, "y": 0.50},
+                        {"x": 0.10, "y": 0.50},
+                    ],
+                    "opacity": 1,
+                    "shadow": False,
+                },
+                {
+                    "path": str(overlay_b),
+                    "points": [
+                        {"x": 0.50, "y": 0.50},
+                        {"x": 0.90, "y": 0.50},
+                        {"x": 0.90, "y": 0.90},
+                        {"x": 0.50, "y": 0.90},
+                    ],
+                    "opacity": 0.8,
+                    "shadow": True,
+                },
+            ],
+        },
+    )
+
+    task_id = response.json()["task"]["id"]
+    task = client.get(f"/api/tasks/{task_id}").json()
+    for _ in range(20):
+        if task["status"] != "running":
+            break
+        sleep(0.05)
+        task = client.get(f"/api/tasks/{task_id}").json()
+
+    assert response.status_code == 200
+    assert task["status"] == "completed"
+    assert len(task["result"]["assets"]) == 2
+
+
 def test_perspective_text_batch_reads_excel_and_names_by_product_id(tmp_path: Path):
     project_dir = tmp_path / "ProjectA"
     ProjectService().create_project(project_dir)

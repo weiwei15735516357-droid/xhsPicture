@@ -45,6 +45,42 @@ class PerspectiveComposer:
                 progress_callback(index, total, f"正在生成透视合成 {index}/{total}")
         return {"assets": assets}
 
+    def compose_items_batch(
+        self,
+        project_dir: Path,
+        scene_path: Path,
+        overlay_items: list[dict[str, Any]],
+        progress_callback: Callable[[int, int, str], None] | None = None,
+    ) -> dict[str, Any]:
+        if not overlay_items:
+            raise ValueError("Please select at least one overlay image")
+        output_dir = project_dir / "compositions" / datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        registry = AssetRegistry(project_dir)
+        scene = self._cover_to_canvas(Image.open(scene_path).convert("RGB"))
+        assets = []
+        total = len(overlay_items)
+        for index, item in enumerate(overlay_items, start=1):
+            overlay_path = Path(str(item["path"]))
+            item_points = item.get("points") or []
+            if len(item_points) != 4:
+                raise ValueError("Perspective overlay requires 4 points")
+            quad = self._normalized_quad(item_points)
+            overlay = Image.open(overlay_path).convert("RGBA")
+            composed = self._compose_one(
+                scene,
+                overlay,
+                quad,
+                opacity=float(item.get("opacity", 1.0)),
+                shadow=bool(item.get("shadow", True)),
+            )
+            output_path = output_dir / f"{overlay_path.stem}_perspective_{index:03d}.png"
+            composed.save(output_path)
+            assets.append(registry.add_asset(output_path, "透视合成图", str(overlay_path)))
+            if progress_callback:
+                progress_callback(index, total, f"正在生成图片叠图 {index}/{total}")
+        return {"assets": assets}
+
     def compose_text_batch(
         self,
         project_dir: Path,

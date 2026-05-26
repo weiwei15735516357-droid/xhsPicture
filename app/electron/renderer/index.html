@@ -160,6 +160,14 @@
               <strong>&#20840;&#37096;&#21472;&#22270;&#39044;&#35272;</strong>
               <span id="image-preview-counter">0 &#24352;</span>
             </div>
+            <div id="image-default-style" class="excel-default-style image-default-style">
+              <strong>&#32479;&#19968;&#40664;&#35748;&#26679;&#24335;</strong>
+              <label>&#39044;&#35272;&#22823;&#23567;<input id="image-preview-size" type="range" min="240" max="460" step="20" value="320" /></label>
+              <label>&#36879;&#26126;&#24230;<input id="image-default-opacity" type="number" min="0.1" max="1" step="0.05" value="1" /></label>
+              <label class="inline"><input id="image-default-shadow" type="checkbox" checked /> &#38452;&#24433;</label>
+              <button id="image-apply-default-btn">&#24212;&#29992;&#21040;&#20840;&#37096;</button>
+              <button id="image-reset-points-btn">&#37325;&#32622;&#22235;&#35282;</button>
+            </div>
             <div id="image-preview-list" class="excel-preview-list">
               <div class="empty">&#36873;&#25321;&#24213;&#22270;&#21644;&#21472;&#22270;&#21518;&#65292;&#36825;&#37324;&#20250;&#21015;&#20986;&#27599;&#24352;&#22270;&#30340;&#36879;&#35270;&#21512;&#25104;&#39044;&#35272;&#12290;</div>
             </div>
@@ -167,11 +175,11 @@
           <div id="perspective-canvas" class="perspective-canvas">
             <div class="empty">选择底图后可预览；图片叠图模式可拖动四个角定位</div>
           </div>
-          <div class="field-row perspective-image-control hidden-panel">
+          <div class="field-row perspective-image-control hidden-panel legacy-image-control">
             <label for="perspective-opacity">透明度</label>
             <input id="perspective-opacity" type="range" min="0.1" max="1" step="0.05" value="1" />
           </div>
-          <label class="checkbox-row perspective-image-control hidden-panel">
+          <label class="checkbox-row perspective-image-control hidden-panel legacy-image-control">
             <input id="perspective-shadow" type="checkbox" checked />
             添加柔和阴影
           </label>

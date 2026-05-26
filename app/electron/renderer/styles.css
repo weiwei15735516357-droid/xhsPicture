@@ -207,8 +207,10 @@ textarea {
 }
 
 .hidden-panel,
-.hidden-view {
-  display: none;
+.hidden-view,
+.view-panel.hidden-view,
+.perspective-only.hidden-view {
+  display: none !important;
 }
 
 .panel {
@@ -478,11 +480,12 @@ textarea {
 }
 
 .image-preview-card {
+  grid-template-columns: var(--image-preview-width, 320px) minmax(360px, 1fr);
   cursor: pointer;
 }
 
 .image-card-preview {
-  min-height: 220px;
+  min-height: 0;
 }
 
 .excel-card-preview {
@@ -567,6 +570,14 @@ textarea {
 .excel-default-style select,
 .excel-default-style button {
   width: 100%;
+}
+
+.image-default-style {
+  grid-template-columns: 130px 180px 120px 100px 140px 120px;
+}
+
+.legacy-image-control {
+  display: none !important;
 }
 
 .text-control-grid {

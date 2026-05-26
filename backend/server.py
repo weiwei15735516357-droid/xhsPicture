@@ -124,15 +124,23 @@ def create_app() -> FastAPI:
                         progress_callback=progress,
                     )
                 else:
-                    result = composer.compose_batch(
-                        project_dir=Path(request.project_dir),
-                        scene_path=Path(request.scene_path),
-                        overlay_paths=[Path(item) for item in request.overlay_paths],
-                        points=[point.model_dump() for point in request.points],
-                        opacity=request.opacity,
-                        shadow=request.shadow,
-                        progress_callback=progress,
-                    )
+                    if request.overlay_items:
+                        result = composer.compose_items_batch(
+                            project_dir=Path(request.project_dir),
+                            scene_path=Path(request.scene_path),
+                            overlay_items=[item.model_dump() for item in request.overlay_items],
+                            progress_callback=progress,
+                        )
+                    else:
+                        result = composer.compose_batch(
+                            project_dir=Path(request.project_dir),
+                            scene_path=Path(request.scene_path),
+                            overlay_paths=[Path(item) for item in request.overlay_paths],
+                            points=[point.model_dump() for point in request.points],
+                            opacity=request.opacity,
+                            shadow=request.shadow,
+                            progress_callback=progress,
+                        )
                 task_store.complete(task["id"], result)
             except Exception as exc:
                 task_store.fail(task["id"], str(exc))

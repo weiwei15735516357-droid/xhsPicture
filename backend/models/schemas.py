@@ -77,11 +77,19 @@ class TextOverlayRow(BaseModel):
     text_options: TextOverlayOptions = Field(default_factory=TextOverlayOptions)
 
 
+class PerspectiveOverlayItem(BaseModel):
+    path: str
+    points: list[PerspectivePoint] = Field(default_factory=list)
+    opacity: float = Field(default=1.0, ge=0.1, le=1.0)
+    shadow: bool = True
+
+
 class PerspectiveComposeRequest(BaseModel):
     project_dir: str
     scene_path: str
     mode: str = "image"
     overlay_paths: list[str] = Field(default_factory=list)
+    overlay_items: list[PerspectiveOverlayItem] = Field(default_factory=list)
     excel_path: str | None = None
     points: list[PerspectivePoint] = Field(default_factory=list)
     opacity: float = Field(default=1.0, ge=0.1, le=1.0)
