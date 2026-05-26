@@ -636,7 +636,13 @@ function createImagePreviewCard(overlayPath, index) {
   } else {
     preview.innerHTML = '<div class="empty">\u5148\u9009\u62e9\u5e95\u56fe</div>';
   }
-  preview.appendChild(createPerspectiveOverlayImage(overlayPath, item));
+  const overlay = createPerspectiveOverlayImage(overlayPath, item);
+  preview.appendChild(overlay);
+  addPerspectiveCardControls(preview, item, () => {
+    if (index === state.perspectiveOverlayIndex) {
+      renderPerspectiveCanvas();
+    }
+  });
   const form = document.createElement('div');
   form.className = 'excel-card-form image-card-form';
   const filename = overlayPath.split(/[\\/]/).pop();
@@ -669,6 +675,53 @@ function createImagePreviewCard(overlayPath, index) {
   card.appendChild(preview);
   card.appendChild(form);
   return card;
+}
+
+function addPerspectiveCardControls(container, item, onChange) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  polygon.setAttribute('fill', 'rgba(217,48,37,0.10)');
+  polygon.setAttribute('stroke', '#d93025');
+  polygon.setAttribute('stroke-width', '2');
+  polygon.setAttribute('points', item.points.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.appendChild(polygon);
+  container.appendChild(svg);
+  item.points.forEach((point, pointIndex) => {
+    const handle = document.createElement('div');
+    handle.className = 'perspective-handle image-card-handle';
+    handle.style.left = `${point.x * 100}%`;
+    handle.style.top = `${point.y * 100}%`;
+    handle.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const rect = container.getBoundingClientRect();
+      handle.setPointerCapture(event.pointerId);
+      handle.onpointermove = (moveEvent) => {
+        const x = Math.max(0, Math.min(1, (moveEvent.clientX - rect.left) / rect.width));
+        const y = Math.max(0, Math.min(1, (moveEvent.clientY - rect.top) / rect.height));
+        item.points[pointIndex] = { x, y };
+        handle.style.left = `${x * 100}%`;
+        handle.style.top = `${y * 100}%`;
+        polygon.setAttribute('points', item.points.map((nextPoint) => `${nextPoint.x * 100},${nextPoint.y * 100}`).join(' '));
+        const overlay = container.querySelector('.perspective-overlay-preview');
+        if (overlay) {
+          applyPerspectiveOverlayGeometry(overlay, item);
+        }
+      };
+      handle.onpointerup = handle.onpointercancel = (endEvent) => {
+        if (handle.hasPointerCapture(endEvent.pointerId)) {
+          handle.releasePointerCapture(endEvent.pointerId);
+        }
+        handle.onpointermove = null;
+        handle.onpointerup = null;
+        handle.onpointercancel = null;
+        onChange();
+      };
+    });
+    container.appendChild(handle);
+  });
 }
 
 function renderImagePreviewList() {
@@ -1213,7 +1266,9 @@ document.getElementById('image-default-shadow').addEventListener('change', (even
   state.perspectiveImageDefaults.shadow = event.target.checked;
 });
 document.getElementById('image-apply-default-btn').addEventListener('click', () => {
+  const defaultPoints = clonePerspectivePoints(currentPerspectivePoints());
   state.perspectiveOverlayItems.forEach((item) => {
+    item.points = clonePerspectivePoints(defaultPoints);
     item.opacity = Number(state.perspectiveImageDefaults.opacity);
     item.shadow = Boolean(state.perspectiveImageDefaults.shadow);
   });
