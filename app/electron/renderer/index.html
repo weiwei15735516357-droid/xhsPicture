@@ -123,8 +123,8 @@
           </details>
         </article>
 
-        <article class="panel perspective-panel view-panel hidden-view" data-view="perspective">
-          <h2>批量透视合成</h2>
+        <article class="panel perspective-panel view-panel perspective-only hidden-view" data-view="perspective">
+          <h2>&#36879;&#35270;&#21512;&#25104;</h2>
           <div class="mode-tabs">
             <label><input name="perspective-mode" type="radio" value="excel" checked /> Excel文字叠图</label>
             <label><input name="perspective-mode" type="radio" value="image" /> 图片叠图</label>
@@ -134,9 +134,18 @@
             <button id="perspective-excel-btn" class="perspective-excel-control">选择 Excel 表格</button>
             <button id="perspective-overlays-btn" class="perspective-image-control hidden-panel">选择叠图</button>
             <button id="perspective-overlay-folder-btn" class="perspective-image-control hidden-panel">选择叠图文件夹</button>
-            <button id="perspective-start-btn">&#24320;&#22987;&#29983;&#25104;</button>
+            <button id="perspective-start-btn">&#24320;&#22987;&#25209;&#37327;&#21512;&#25104;</button>
           </div>
           <p id="perspective-summary" class="muted">&#36755;&#20986;&#22266;&#23450;&#20026; 1080x1440&#65292;&#36866;&#21512;&#23567;&#32418;&#20070; 3:4 &#22270;&#29255;&#12290;</p>
+          <div class="perspective-task-status">
+            <div class="progress-head">
+              <span id="perspective-progress-label">&#31561;&#24453;&#36879;&#35270;&#21512;&#25104;&#20219;&#21153;</span>
+              <strong id="perspective-progress-percent">0%</strong>
+            </div>
+            <div class="progress-track">
+              <div id="perspective-progress-bar" class="progress-bar"></div>
+            </div>
+          </div>
           <div class="excel-preview-panel perspective-excel-control">
             <div class="preview-nav">
               <strong>&#20840;&#37096;&#21830;&#21697;&#39044;&#35272;</strong>

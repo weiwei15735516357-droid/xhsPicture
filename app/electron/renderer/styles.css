@@ -384,6 +384,13 @@ textarea {
   display: none;
 }
 
+.perspective-task-status {
+  padding: 10px 12px;
+  border: 1px solid #e1e5ea;
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+
 .perspective-scene {
   width: 100%;
   height: 100%;

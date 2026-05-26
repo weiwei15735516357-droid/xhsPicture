@@ -54,6 +54,9 @@ function setupNavigation() {
       const views = panel.dataset.view.split(/\s+/);
       panel.classList.toggle('hidden-view', !views.includes(view));
     });
+    document.querySelectorAll('.perspective-only').forEach((panel) => {
+      panel.classList.toggle('hidden-view', view !== 'perspective');
+    });
     setText('view-title', button.dataset.title);
     setText('view-desc', button.dataset.desc);
   };
@@ -738,6 +741,15 @@ function updateProgress(progress = { percent: 0, message: '等待任务' }) {
   setText('progress-label', progress.message || '正在处理');
 }
 
+function updatePerspectiveTaskProgress(progress = { percent: 0, message: '\u7b49\u5f85\u900f\u89c6\u5408\u6210\u4efb\u52a1' }) {
+  const percent = Math.max(0, Math.min(Number(progress.percent || 0), 100));
+  const bar = document.getElementById('perspective-progress-bar');
+  const percentText = document.getElementById('perspective-progress-percent');
+  const label = document.getElementById('perspective-progress-label');
+  if (bar) { bar.style.width = `${percent}%`; }
+  if (percentText) { percentText.textContent = `${percent}%`; }
+  if (label) { label.textContent = progress.message || '\u6b63\u5728\u900f\u89c6\u5408\u6210'; }
+}
 async function waitForTask(taskId) {
   while (true) {
     const task = await api(`/api/tasks/${taskId}`);
@@ -748,6 +760,23 @@ async function waitForTask(taskId) {
     }
     if (task.status === 'failed') {
       throw new Error(task.error || '导出失败');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+async function waitForPerspectiveTask(taskId) {
+  while (true) {
+    const task = await api(`/api/tasks/${taskId}`);
+    updateProgress(task.progress);
+    updatePerspectiveTaskProgress(task.progress);
+    setText('task-summary', `\u6700\u8fd1\u4efb\u52a1\uff1a${task.status}`);
+    if (task.status === 'completed') {
+      updatePerspectiveTaskProgress({ percent: 100, message: '\u900f\u89c6\u5408\u6210\u5b8c\u6210' });
+      return task;
+    }
+    if (task.status === 'failed') {
+      updatePerspectiveTaskProgress({ percent: task.progress?.percent || 0, message: task.error || '\u900f\u89c6\u5408\u6210\u5931\u8d25' });
+      throw new Error(task.error || '\u900f\u89c6\u5408\u6210\u5931\u8d25');
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
@@ -863,9 +892,10 @@ async function runPerspectiveCompose() {
   const button = document.getElementById('perspective-start-btn');
   state.perspectiveInProgress = true;
   button.disabled = true;
-  button.textContent = '合成中...';
+  button.textContent = '\u5408\u6210\u4e2d...';
   try {
-    updateProgress({ percent: 0, message: '准备开始透视合成' });
+    updateProgress({ percent: 0, message: '\u51c6\u5907\u5f00\u59cb\u900f\u89c6\u5408\u6210' });
+    updatePerspectiveTaskProgress({ percent: 0, message: '\u51c6\u5907\u5f00\u59cb\u900f\u89c6\u5408\u6210' });
     const started = await api('/api/perspective/compose/start', {
       method: 'POST',
       body: JSON.stringify({
@@ -885,14 +915,14 @@ async function runPerspectiveCompose() {
         }))
       })
     });
-    const task = await waitForTask(started.task.id);
+    const task = await waitForPerspectiveTask(started.task.id);
     appendLog(`透视合成完成，生成 ${task.result.assets.length} 张图片。`);
   } catch (error) {
     appendLog(`错误：${error.message}`);
   } finally {
     state.perspectiveInProgress = false;
     button.disabled = false;
-    button.textContent = '开始批量合成';
+    button.textContent = '\u5f00\u59cb\u6279\u91cf\u5408\u6210';
   }
 }
 
