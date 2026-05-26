@@ -368,7 +368,7 @@ textarea {
   grid-column: 1;
 }
 
-.perspective-panel > :not(h2):not(.excel-preview-panel) {
+.perspective-panel > :not(h2):not(.excel-preview-panel):not(.image-preview-panel) {
   grid-column: 1;
 }
 
@@ -396,6 +396,13 @@ textarea {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.perspective-overlay-preview {
+  position: absolute;
+  z-index: 2;
+  object-fit: fill;
+  pointer-events: none;
 }
 
 .perspective-handle {
@@ -428,6 +435,10 @@ textarea {
   background: #fbfcfe;
   max-height: calc(100vh - 238px);
   overflow: auto;
+}
+
+.image-preview-panel {
+  grid-column: 1;
 }
 
 .preview-nav {
@@ -464,6 +475,14 @@ textarea {
 .excel-preview-card.selected {
   border-color: #1a73e8;
   box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.12);
+}
+
+.image-preview-card {
+  cursor: pointer;
+}
+
+.image-card-preview {
+  min-height: 220px;
 }
 
 .excel-card-preview {
