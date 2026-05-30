@@ -596,6 +596,63 @@ textarea {
   display: none !important;
 }
 
+.feishu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.feishu-grid label {
+  display: grid;
+  gap: 6px;
+  color: #52606d;
+  font-size: 13px;
+}
+
+.feishu-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.feishu-grid .button-row {
+  align-items: center;
+}
+
+.feishu-grid .button-row input {
+  flex: 1;
+}
+
+.feishu-preview {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e1e5ea;
+  border-radius: 6px;
+  background: #fbfcfe;
+}
+
+.feishu-mapping-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.feishu-mapping-row {
+  display: grid;
+  grid-template-columns: 90px 180px minmax(240px, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #d9dee7;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.feishu-mapping-row em {
+  color: #66788a;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
 .text-control-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(86px, 1fr));

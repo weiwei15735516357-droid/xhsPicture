@@ -205,7 +205,41 @@
 
         <article class="panel view-panel hidden-view" data-view="feishu">
           <h2>飞书上传</h2>
-          <p class="muted">飞书表格建好后，再在这里填写 App ID、表格信息、行范围和附件字段。</p>
+          <p class="muted">按子文件夹顺序上传到飞书多维表格附件字段。固定字段：图片编辑 / 视频编辑。</p>
+          <div class="feishu-grid">
+            <label>App ID<input id="feishu-app-id" placeholder="cli_xxx" /></label>
+            <label>App Secret<input id="feishu-app-secret" type="password" placeholder="App Secret" /></label>
+            <label class="wide">多维表格链接<input id="feishu-bitable-url" placeholder="复制打开具体数据表后的链接，需包含 table 参数" /></label>
+            <label>上传字段
+              <select id="feishu-field-name">
+                <option value="图片编辑">图片编辑</option>
+                <option value="视频编辑">视频编辑</option>
+              </select>
+            </label>
+            <label>行范围<input id="feishu-row-range" placeholder="2-5" /></label>
+            <label class="wide">上传总文件夹
+              <div class="button-row">
+                <input id="feishu-upload-root" placeholder="选择包含多个子文件夹的总目录" />
+                <button id="feishu-folder-btn">选择文件夹</button>
+              </div>
+            </label>
+          </div>
+          <div class="button-row export-actions">
+            <button id="feishu-save-btn">保存配置</button>
+            <button id="feishu-preview-btn">预览行与文件夹</button>
+            <button id="feishu-test-btn">测试连接</button>
+            <button id="feishu-upload-btn">开始上传</button>
+          </div>
+          <div class="perspective-task-status">
+            <div class="progress-head">
+              <span id="feishu-progress-label">等待飞书上传任务</span>
+              <strong id="feishu-progress-percent">0%</strong>
+            </div>
+            <div class="progress-track">
+              <div id="feishu-progress-bar" class="progress-bar"></div>
+            </div>
+          </div>
+          <div id="feishu-preview" class="feishu-preview empty">选择总文件夹并填写行范围后，可先预览：第几个子文件夹上传到第几行。</div>
         </article>
 
         <article class="panel view-panel hidden-view" data-view="settings">

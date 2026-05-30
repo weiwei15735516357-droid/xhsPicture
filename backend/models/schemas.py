@@ -6,8 +6,9 @@ class FeishuSettings(BaseModel):
     app_secret: str = ""
     bitable_url: str = ""
     table_id: str = ""
-    attachment_field_name: str = ""
+    attachment_field_name: str = "图片编辑"
     row_range: str = ""
+    upload_root: str = ""
 
 
 class AppSettings(BaseModel):
@@ -33,6 +34,20 @@ class CreateLogRequest(BaseModel):
 class ImportAssetsRequest(BaseModel):
     project_dir: str
     paths: list[str]
+
+
+class FeishuFolderPreviewRequest(BaseModel):
+    row_range: str
+    upload_root: str
+
+
+class FeishuUploadRequest(BaseModel):
+    app_id: str
+    app_secret: str
+    bitable_url: str
+    field_name: str = "图片编辑"
+    row_range: str
+    upload_root: str
 
 
 class LayoutSlot(BaseModel):

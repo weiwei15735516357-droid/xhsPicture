@@ -172,6 +172,10 @@ if (app) {
     const result = await dialog.showOpenDialog({ properties: ['openFile'], filters: getSpreadsheetImportFilters() });
     return result.canceled ? null : result.filePaths[0];
   });
+  ipcMain.handle('dialog:select-feishu-upload-root', async () => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    return result.canceled ? null : result.filePaths[0];
+  });
   ipcMain.handle('shell:show-item-in-folder', (_event, filePath) => {
     shell.showItemInFolder(filePath);
     return true;

@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException
 from backend.models.schemas import (
     CreateLogRequest,
     CreateProjectRequest,
+    FeishuFolderPreviewRequest,
+    FeishuUploadRequest,
     ExportDocumentRequest,
     ImportAssetsRequest,
     PerspectiveComposeRequest,
@@ -14,6 +16,7 @@ from backend.models.schemas import (
 from backend.services.asset_importer import AssetImporter
 from backend.services.asset_registry import AssetRegistry
 from backend.services.document_exporter import DocumentExporter
+from backend.services.feishu_uploader import FeishuUploader
 from backend.services.log_service import LogService
 from backend.services.perspective_composer import PerspectiveComposer
 from backend.services.project_service import ProjectService
@@ -167,6 +170,33 @@ def create_app() -> FastAPI:
     @app.post("/api/logs")
     def create_log(request: CreateLogRequest) -> dict[str, Any]:
         return LogService(paths.LOG_DIR / "app.log").append(request.level, request.message, request.context)
+
+    @app.post("/api/feishu/preview-folders")
+    def preview_feishu_folders(request: FeishuFolderPreviewRequest) -> dict[str, Any]:
+        return FeishuUploader().preview_folder_mapping(Path(request.upload_root), request.row_range)
+
+    @app.post("/api/feishu/test")
+    def test_feishu_connection(request: FeishuUploadRequest) -> dict[str, Any]:
+        return FeishuUploader().test_connection(request.model_dump())
+
+    @app.post("/api/feishu/upload/start")
+    def start_feishu_upload(request: FeishuUploadRequest) -> dict[str, Any]:
+        task = task_store.create_running("feishu_upload", "等待开始飞书上传")
+
+        def run_upload() -> None:
+            try:
+                result = FeishuUploader().upload_by_folders(
+                    request.model_dump(),
+                    progress_callback=lambda current, total, message: task_store.update_progress(
+                        task["id"], current, total, message
+                    ),
+                )
+                task_store.complete(task["id"], result)
+            except Exception as exc:
+                task_store.fail(task["id"], str(exc))
+
+        Thread(target=run_upload, daemon=True).start()
+        return {"task": task}
 
     return app
 

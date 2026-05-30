@@ -36,6 +36,7 @@ const state = {
     shadow: true,
     previewWidth: 320
   },
+  feishuInProgress: false,
   perspectiveInProgress: false,
   exportInProgress: false,
   aspectGuard: localStorage.getItem('xhs.layoutAspectGuard') !== 'false'
@@ -967,6 +968,17 @@ function updatePerspectiveTaskProgress(progress = { percent: 0, message: '\u7b49
   if (percentText) { percentText.textContent = `${percent}%`; }
   if (label) { label.textContent = progress.message || '\u6b63\u5728\u900f\u89c6\u5408\u6210'; }
 }
+
+function updateFeishuProgress(progress = { percent: 0, message: '等待飞书上传任务' }) {
+  const percent = Math.max(0, Math.min(Number(progress.percent || 0), 100));
+  const bar = document.getElementById('feishu-progress-bar');
+  const percentText = document.getElementById('feishu-progress-percent');
+  const label = document.getElementById('feishu-progress-label');
+  if (bar) { bar.style.width = `${percent}%`; }
+  if (percentText) { percentText.textContent = `${percent}%`; }
+  if (label) { label.textContent = progress.message || '正在上传飞书附件'; }
+}
+
 async function waitForTask(taskId) {
   while (true) {
     const task = await api(`/api/tasks/${taskId}`);
@@ -977,6 +989,22 @@ async function waitForTask(taskId) {
     }
     if (task.status === 'failed') {
       throw new Error(task.error || '导出失败');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+
+async function waitForFeishuTask(taskId) {
+  while (true) {
+    const task = await api(`/api/tasks/${taskId}`);
+    updateFeishuProgress(task.progress);
+    if (task.status === 'completed') {
+      updateFeishuProgress({ percent: 100, message: '飞书上传完成' });
+      return task;
+    }
+    if (task.status === 'failed') {
+      updateFeishuProgress({ percent: task.progress?.percent || 0, message: task.error || '飞书上传失败' });
+      throw new Error(task.error || '飞书上传失败');
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
@@ -1174,6 +1202,147 @@ async function runExportAction() {
   }
 }
 
+function collectFeishuPayload() {
+  return {
+    app_id: document.getElementById('feishu-app-id').value.trim(),
+    app_secret: document.getElementById('feishu-app-secret').value.trim(),
+    bitable_url: document.getElementById('feishu-bitable-url').value.trim(),
+    field_name: document.getElementById('feishu-field-name').value,
+    row_range: document.getElementById('feishu-row-range').value.trim(),
+    upload_root: document.getElementById('feishu-upload-root').value.trim()
+  };
+}
+
+function requireFeishuPayload(payload, includeRoot = true) {
+  const required = [
+    ['app_id', '请填写 App ID'],
+    ['app_secret', '请填写 App Secret'],
+    ['bitable_url', '请填写多维表格链接'],
+    ['row_range', '请填写行范围，例如 2-5']
+  ];
+  if (includeRoot) {
+    required.push(['upload_root', '请选择上传总文件夹']);
+  }
+  for (const [key, message] of required) {
+    if (!payload[key]) {
+      appendLog(message);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function loadFeishuSettings() {
+  const settings = await api('/api/settings');
+  const feishu = settings.feishu || {};
+  document.getElementById('feishu-app-id').value = feishu.app_id || '';
+  document.getElementById('feishu-app-secret').value = feishu.app_secret || '';
+  document.getElementById('feishu-bitable-url').value = feishu.bitable_url || '';
+  document.getElementById('feishu-field-name').value = feishu.attachment_field_name || '图片编辑';
+  document.getElementById('feishu-row-range').value = feishu.row_range || '';
+  document.getElementById('feishu-upload-root').value = feishu.upload_root || '';
+}
+
+async function saveFeishuSettings() {
+  const payload = collectFeishuPayload();
+  await api('/api/settings', {
+    method: 'POST',
+    body: JSON.stringify({
+      feishu: {
+        app_id: payload.app_id,
+        app_secret: payload.app_secret,
+        bitable_url: payload.bitable_url,
+        attachment_field_name: payload.field_name,
+        row_range: payload.row_range,
+        upload_root: payload.upload_root
+      }
+    })
+  });
+  appendLog('飞书配置已保存。');
+}
+
+function renderFeishuPreview(preview) {
+  const container = document.getElementById('feishu-preview');
+  if (!preview.mappings.length) {
+    container.className = 'feishu-preview empty';
+    container.textContent = '没有可上传映射：请检查行范围和总文件夹下的子文件夹。';
+    return;
+  }
+  container.className = 'feishu-preview';
+  container.innerHTML = `
+    <div class="preview-nav">
+      <strong>将上传 ${preview.upload_count} 个子文件夹</strong>
+      <span>跳过 ${preview.skipped_folder_count} 个多余子文件夹</span>
+    </div>
+    <div class="feishu-mapping-list">
+      ${preview.mappings.map((item) => `
+        <div class="feishu-mapping-row">
+          <strong>第 ${item.row_number} 行</strong>
+          <span>${escapeHtml(item.folder_name)}</span>
+          <em>${item.image_count} 张：${escapeHtml(item.images.join('、'))}</em>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+async function previewFeishuFolders() {
+  const payload = collectFeishuPayload();
+  if (!payload.row_range || !payload.upload_root) {
+    appendLog('请先填写行范围并选择上传总文件夹。');
+    return;
+  }
+  const preview = await api('/api/feishu/preview-folders', {
+    method: 'POST',
+    body: JSON.stringify({ row_range: payload.row_range, upload_root: payload.upload_root })
+  });
+  renderFeishuPreview(preview);
+}
+
+async function testFeishuConnection() {
+  const payload = collectFeishuPayload();
+  if (!requireFeishuPayload(payload, false)) {
+    return;
+  }
+  const result = await api('/api/feishu/test', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  appendLog(`飞书连接正常：找到 ${result.record_count} 行，字段 ${result.field_name} 可用。`);
+}
+
+async function runFeishuUpload() {
+  const payload = collectFeishuPayload();
+  if (!requireFeishuPayload(payload, true)) {
+    return;
+  }
+  if (state.feishuInProgress) {
+    appendLog('飞书上传正在执行，请等待完成。');
+    return;
+  }
+  const button = document.getElementById('feishu-upload-btn');
+  state.feishuInProgress = true;
+  button.disabled = true;
+  button.textContent = '上传中...';
+  try {
+    await saveFeishuSettings();
+    await previewFeishuFolders();
+    updateFeishuProgress({ percent: 0, message: '准备开始飞书上传' });
+    const started = await api('/api/feishu/upload/start', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const task = await waitForFeishuTask(started.task.id);
+    appendLog(`飞书上传完成：${task.result.upload_count} 行，跳过 ${task.result.skipped_folder_count} 个多余子文件夹。`);
+  } catch (error) {
+    appendLog(`错误：${error.message}`);
+  } finally {
+    state.feishuInProgress = false;
+    button.disabled = false;
+    button.textContent = '开始上传';
+  }
+}
+
 document.getElementById('create-project-btn').addEventListener('click', () => runAction(createProject));
 document.getElementById('refresh-assets-btn').addEventListener('click', () => runAction(refreshAssets));
 document.getElementById('import-files-btn').addEventListener('click', async () => {
@@ -1338,6 +1507,18 @@ document.getElementById('select-document-btn').addEventListener('click', () => r
   appendLog(`已选择文档：${selected}`);
 }));
 document.getElementById('start-export-btn').addEventListener('click', runExportAction);
+document.getElementById('feishu-folder-btn').addEventListener('click', () => runAction(async () => {
+  const selected = await window.xhsApp.selectFeishuUploadRoot();
+  if (!selected) {
+    return;
+  }
+  document.getElementById('feishu-upload-root').value = selected;
+  await previewFeishuFolders();
+}));
+document.getElementById('feishu-save-btn').addEventListener('click', () => runAction(saveFeishuSettings));
+document.getElementById('feishu-preview-btn').addEventListener('click', () => runAction(previewFeishuFolders));
+document.getElementById('feishu-test-btn').addEventListener('click', () => runAction(testFeishuConnection));
+document.getElementById('feishu-upload-btn').addEventListener('click', runFeishuUpload);
 
 renderProject();
 setupNavigation();
@@ -1349,4 +1530,5 @@ syncAspectGuardControl();
 syncSummaryControls();
 renderLayoutTool();
 refreshBackendStatus();
+runAction(loadFeishuSettings);
 setInterval(refreshBackendStatus, 5000);
