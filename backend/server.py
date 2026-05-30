@@ -8,6 +8,7 @@ from backend.models.schemas import (
     CreateLogRequest,
     CreateProjectRequest,
     FeishuFolderPreviewRequest,
+    FeishuTestRequest,
     FeishuUploadRequest,
     ExportDocumentRequest,
     ImportAssetsRequest,
@@ -176,7 +177,7 @@ def create_app() -> FastAPI:
         return FeishuUploader().preview_folder_mapping(Path(request.upload_root), request.row_range)
 
     @app.post("/api/feishu/test")
-    def test_feishu_connection(request: FeishuUploadRequest) -> dict[str, Any]:
+    def test_feishu_connection(request: FeishuTestRequest) -> dict[str, Any]:
         return FeishuUploader().test_connection(request.model_dump())
 
     @app.post("/api/feishu/upload/start")

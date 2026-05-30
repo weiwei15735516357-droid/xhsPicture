@@ -41,6 +41,13 @@ class FeishuFolderPreviewRequest(BaseModel):
     upload_root: str
 
 
+class FeishuTestRequest(BaseModel):
+    app_id: str
+    app_secret: str
+    bitable_url: str
+    field_name: str = "图片编辑"
+
+
 class FeishuUploadRequest(BaseModel):
     app_id: str
     app_secret: str

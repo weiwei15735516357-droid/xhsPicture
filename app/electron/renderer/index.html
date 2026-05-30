@@ -216,7 +216,8 @@
                 <option value="视频编辑">视频编辑</option>
               </select>
             </label>
-            <label>行范围<input id="feishu-row-range" placeholder="2-5" /></label>
+            <label>起始行<input id="feishu-row-start" type="number" min="1" placeholder="2" /></label>
+            <label>结束行<input id="feishu-row-end" type="number" min="1" placeholder="5；单行可不填" /></label>
             <label class="wide">上传总文件夹
               <div class="button-row">
                 <input id="feishu-upload-root" placeholder="选择包含多个子文件夹的总目录" />
@@ -226,7 +227,7 @@
           </div>
           <div class="button-row export-actions">
             <button id="feishu-save-btn">保存配置</button>
-            <button id="feishu-preview-btn">预览行与文件夹</button>
+            <button id="feishu-preview-btn">检查上传对应关系</button>
             <button id="feishu-test-btn">测试连接</button>
             <button id="feishu-upload-btn">开始上传</button>
           </div>
@@ -239,7 +240,8 @@
               <div id="feishu-progress-bar" class="progress-bar"></div>
             </div>
           </div>
-          <div id="feishu-preview" class="feishu-preview empty">选择总文件夹并填写行范围后，可先预览：第几个子文件夹上传到第几行。</div>
+          <div id="feishu-preview" class="feishu-preview empty">上传前先检查对应关系：第几个子文件夹会上传到第几行，避免传错行。</div>
+          <pre id="feishu-log" class="feishu-log"></pre>
         </article>
 
         <article class="panel view-panel hidden-view" data-view="settings">

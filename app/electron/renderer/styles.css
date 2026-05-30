@@ -630,6 +630,18 @@ textarea {
   background: #fbfcfe;
 }
 
+.feishu-log {
+  height: 150px;
+  margin: 14px 0 0;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid #e1e5ea;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #52606d;
+  white-space: pre-wrap;
+}
+
 .feishu-mapping-list {
   display: grid;
   gap: 8px;

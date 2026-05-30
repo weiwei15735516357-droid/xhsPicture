@@ -177,6 +177,12 @@ class FeishuUploader:
 
 
 def parse_row_range(value: str) -> list[int]:
+    single = re.fullmatch(r"\s*(\d+)\s*", value or "")
+    if single:
+        row = int(single.group(1))
+        if row < 1:
+            raise ValueError("行号必须大于等于 1")
+        return [row]
     match = re.fullmatch(r"\s*(\d+)\s*-\s*(\d+)\s*", value or "")
     if not match:
         raise ValueError("行范围格式应为 2-5")

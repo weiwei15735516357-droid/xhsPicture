@@ -1203,29 +1203,40 @@ async function runExportAction() {
 }
 
 function collectFeishuPayload() {
+  const rowStart = document.getElementById('feishu-row-start').value.trim();
+  const rowEnd = document.getElementById('feishu-row-end').value.trim();
   return {
     app_id: document.getElementById('feishu-app-id').value.trim(),
     app_secret: document.getElementById('feishu-app-secret').value.trim(),
     bitable_url: document.getElementById('feishu-bitable-url').value.trim(),
     field_name: document.getElementById('feishu-field-name').value,
-    row_range: document.getElementById('feishu-row-range').value.trim(),
+    row_range: rowStart ? `${rowStart}-${rowEnd || rowStart}` : '',
     upload_root: document.getElementById('feishu-upload-root').value.trim()
   };
 }
 
+function appendFeishuLog(message) {
+  const log = document.getElementById('feishu-log');
+  const time = new Date().toLocaleTimeString();
+  if (log) {
+    log.textContent = [`[${time}] ${message}`, log.textContent].filter(Boolean).join('\n');
+  }
+  appendLog(message);
+}
+
 function requireFeishuPayload(payload, includeRoot = true) {
-  const required = [
+  const requiredFields = [
     ['app_id', '请填写 App ID'],
     ['app_secret', '请填写 App Secret'],
-    ['bitable_url', '请填写多维表格链接'],
-    ['row_range', '请填写行范围，例如 2-5']
+    ['bitable_url', '请填写多维表格链接']
   ];
   if (includeRoot) {
-    required.push(['upload_root', '请选择上传总文件夹']);
+    requiredFields.push(['row_range', '请填写起始行，单行时结束行可不填']);
+    requiredFields.push(['upload_root', '请选择上传总文件夹']);
   }
-  for (const [key, message] of required) {
+  for (const [key, message] of requiredFields) {
     if (!payload[key]) {
-      appendLog(message);
+      appendFeishuLog(message);
       return false;
     }
   }
@@ -1239,8 +1250,9 @@ async function loadFeishuSettings() {
   document.getElementById('feishu-app-secret').value = feishu.app_secret || '';
   document.getElementById('feishu-bitable-url').value = feishu.bitable_url || '';
   document.getElementById('feishu-field-name').value = feishu.attachment_field_name || '图片编辑';
-  document.getElementById('feishu-row-range').value = feishu.row_range || '';
-  document.getElementById('feishu-upload-root').value = feishu.upload_root || '';
+  document.getElementById('feishu-row-start').value = '';
+  document.getElementById('feishu-row-end').value = '';
+  document.getElementById('feishu-upload-root').value = '';
 }
 
 async function saveFeishuSettings() {
@@ -1252,13 +1264,11 @@ async function saveFeishuSettings() {
         app_id: payload.app_id,
         app_secret: payload.app_secret,
         bitable_url: payload.bitable_url,
-        attachment_field_name: payload.field_name,
-        row_range: payload.row_range,
-        upload_root: payload.upload_root
+        attachment_field_name: payload.field_name
       }
     })
   });
-  appendLog('飞书配置已保存。');
+  appendFeishuLog('飞书配置已保存，仅保存 App ID / App Secret / 多维表格链接 / 附件字段。');
 }
 
 function renderFeishuPreview(preview) {
@@ -1289,14 +1299,16 @@ function renderFeishuPreview(preview) {
 async function previewFeishuFolders() {
   const payload = collectFeishuPayload();
   if (!payload.row_range || !payload.upload_root) {
-    appendLog('请先填写行范围并选择上传总文件夹。');
+    appendFeishuLog('请先填写起始行，并选择上传总文件夹。');
     return;
   }
+  appendFeishuLog(`检查对应关系：行 ${payload.row_range}，目录 ${payload.upload_root}`);
   const preview = await api('/api/feishu/preview-folders', {
     method: 'POST',
     body: JSON.stringify({ row_range: payload.row_range, upload_root: payload.upload_root })
   });
   renderFeishuPreview(preview);
+  appendFeishuLog(`对应关系检查完成：将上传 ${preview.upload_count} 个子文件夹，跳过 ${preview.skipped_folder_count} 个多余子文件夹。`);
 }
 
 async function testFeishuConnection() {
@@ -1308,7 +1320,7 @@ async function testFeishuConnection() {
     method: 'POST',
     body: JSON.stringify(payload)
   });
-  appendLog(`飞书连接正常：找到 ${result.record_count} 行，字段 ${result.field_name} 可用。`);
+  appendFeishuLog(`飞书连接正常：找到 ${result.record_count} 行，字段 ${result.field_name} 可用。`);
 }
 
 async function runFeishuUpload() {
@@ -1339,6 +1351,42 @@ async function runFeishuUpload() {
   } finally {
     state.feishuInProgress = false;
     button.disabled = false;
+    button.textContent = '开始上传';
+  }
+}
+
+async function runFeishuUploadV2() {
+  const payload = collectFeishuPayload();
+  if (!requireFeishuPayload(payload, true)) {
+    return;
+  }
+  if (state.feishuInProgress) {
+    appendFeishuLog('飞书上传正在执行，请等待完成。');
+    return;
+  }
+  const button = document.getElementById('feishu-upload-btn');
+  const buttons = ['feishu-upload-btn', 'feishu-preview-btn', 'feishu-test-btn', 'feishu-save-btn', 'feishu-folder-btn']
+    .map((id) => document.getElementById(id))
+    .filter(Boolean);
+  state.feishuInProgress = true;
+  buttons.forEach((item) => { item.disabled = true; });
+  button.textContent = '上传中...';
+  try {
+    await saveFeishuSettings();
+    await previewFeishuFolders();
+    appendFeishuLog(`开始上传：字段 ${payload.field_name}，行 ${payload.row_range}，目录 ${payload.upload_root}`);
+    updateFeishuProgress({ percent: 0, message: '准备开始飞书上传' });
+    const started = await api('/api/feishu/upload/start', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const task = await waitForFeishuTask(started.task.id);
+    appendFeishuLog(`飞书上传完成：${task.result.upload_count} 行，跳过 ${task.result.skipped_folder_count} 个多余子文件夹。`);
+  } catch (error) {
+    appendFeishuLog(`错误：${error.message}`);
+  } finally {
+    state.feishuInProgress = false;
+    buttons.forEach((item) => { item.disabled = false; });
     button.textContent = '开始上传';
   }
 }
@@ -1518,7 +1566,7 @@ document.getElementById('feishu-folder-btn').addEventListener('click', () => run
 document.getElementById('feishu-save-btn').addEventListener('click', () => runAction(saveFeishuSettings));
 document.getElementById('feishu-preview-btn').addEventListener('click', () => runAction(previewFeishuFolders));
 document.getElementById('feishu-test-btn').addEventListener('click', () => runAction(testFeishuConnection));
-document.getElementById('feishu-upload-btn').addEventListener('click', runFeishuUpload);
+document.getElementById('feishu-upload-btn').addEventListener('click', runFeishuUploadV2);
 
 renderProject();
 setupNavigation();

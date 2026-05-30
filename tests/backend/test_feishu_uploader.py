@@ -57,6 +57,7 @@ class FakeSession:
 
 def test_parse_row_range_returns_1_based_rows():
     assert parse_row_range("2-5") == [2, 3, 4, 5]
+    assert parse_row_range("3") == [3]
 
 
 def test_parse_bitable_url_extracts_app_token_and_table_id():
