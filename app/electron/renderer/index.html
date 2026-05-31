@@ -210,14 +210,16 @@
             <label>App ID<input id="feishu-app-id" placeholder="cli_xxx" /></label>
             <label>App Secret<input id="feishu-app-secret" type="password" placeholder="App Secret" /></label>
             <label class="wide">多维表格链接<input id="feishu-bitable-url" placeholder="复制打开具体数据表后的链接，需包含 table 参数" /></label>
-            <label>上传字段
-              <select id="feishu-field-name">
-                <option value="图片编辑">图片编辑</option>
-                <option value="视频编辑">视频编辑</option>
-              </select>
-            </label>
-            <label>起始行<input id="feishu-row-start" type="number" min="1" placeholder="2" /></label>
-            <label>结束行<input id="feishu-row-end" type="number" min="1" placeholder="5；单行可不填" /></label>
+            <div class="feishu-row-controls">
+              <label>上传字段
+                <select id="feishu-field-name">
+                  <option value="图片编辑">图片编辑</option>
+                  <option value="视频编辑">视频编辑</option>
+                </select>
+              </label>
+              <label>起始行<input id="feishu-row-start" type="number" min="1" placeholder="2" /></label>
+              <label>结束行<input id="feishu-row-end" type="number" min="1" placeholder="单行可不填" /></label>
+            </div>
             <label class="wide">上传总文件夹
               <div class="button-row">
                 <input id="feishu-upload-root" placeholder="选择包含多个子文件夹的总目录" />
